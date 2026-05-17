@@ -1,0 +1,23 @@
+<!-- ReciboCondo - Splash overlay animado sugerido -->
+<div id="appSplash" class="rc-splash">
+  <div class="rc-splash-card">
+    <img src="./icons/icon-192.png" alt="ReciboCondo" class="rc-splash-icon">
+    <h1><span>Recibo</span><b>Condo</b></h1>
+    <p>Recibos de prestadores e serviços de condomínio</p>
+    <div class="rc-splash-bar"><i></i></div>
+    <small>Carregando dados locais...</small>
+  </div>
+</div>
+<style>
+.rc-splash{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:radial-gradient(circle at 25% 12%,rgba(216,182,106,.12),transparent 38%),linear-gradient(135deg,#0F2A3A,#07111F);color:#fff;font-family:Merriweather,Georgia,serif}
+.rc-splash-card{text-align:center;padding:32px;max-width:420px}
+.rc-splash-icon{width:132px;height:132px;border-radius:32px;box-shadow:0 24px 70px rgba(0,0,0,.38)}
+.rc-splash h1{margin:22px 0 6px;font-size:42px;letter-spacing:-.03em}.rc-splash h1 b{color:#D8B66A}
+.rc-splash p{text-transform:uppercase;letter-spacing:.22em;color:#D8B66A;font-size:12px;line-height:1.8}
+.rc-splash-bar{height:8px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.12);margin:28px auto 12px;max-width:280px}
+.rc-splash-bar i{display:block;height:100%;width:62%;border-radius:999px;background:linear-gradient(90deg,#8A641E,#D8B66A,#C89A3D);animation:rcLoad 1.8s ease-in-out infinite}
+.rc-splash small{opacity:.82}@keyframes rcLoad{0%{transform:translateX(-90%)}50%{transform:translateX(25%)}100%{transform:translateX(170%)}}
+</style>
+<script>
+window.addEventListener('load',()=>setTimeout(()=>document.getElementById('appSplash')?.remove(),850));
+</script>
