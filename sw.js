@@ -1,4 +1,6 @@
-const CACHE_NAME = 'recibocondo-v61-cache-20260517';
+const CACHE_PREFIX = 'recibocondo-';
+const CACHE_NAME = 'recibocondo-v62-isolated';
+const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
   './index.html',
@@ -21,14 +23,21 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+    caches.keys().then(keys => Promise.all(
+      keys
+        .filter(k => k.startsWith(CACHE_PREFIX) && k !== CACHE_NAME)
+        .map(k => caches.delete(k))
+    )).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
   const request = event.request;
+  const url = new URL(request.url);
   if (request.method !== 'GET') return;
+
+  // Nunca interceptar outros apps hospedados na mesma origem GitHub Pages.
+  if (url.origin === self.location.origin && !url.pathname.startsWith(APP_SCOPE)) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
