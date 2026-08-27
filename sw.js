@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v84-backup-panel';
+const CACHE_NAME = 'recibocondo-v85-receipt-condo-snapshot';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
