@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v92-service-value-guard';
+const CACHE_NAME = 'recibocondo-v93-payment-date-guard';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
