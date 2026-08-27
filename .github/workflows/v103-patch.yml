@@ -1,0 +1,78 @@
+name: v103 payment ledger UI
+on:
+  push:
+    paths:
+      - '.github/workflows/v103-patch.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch payment center to use ledger events
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess,tempfile
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          def once(old,new,label):
+              global s
+              n=s.count(old)
+              if n!=1: raise SystemExit(f'{label}: expected 1 match, got {n}')
+              s=s.replace(old,new,1)
+          old_summary="get paymentSummary(){let rows=this.filteredPayments, paid=rows.reduce((a,s)=>a+Number(s.paidValue||0),0), expected=rows.reduce((a,s)=>a+Number(s.amount||0),0), open=rows.reduce((a,s)=>a+this.balance(s),0), paidCount=rows.filter(s=>Number(s.paidValue||0)>0).length, missingReceipt=rows.filter(s=>Number(s.paidValue||0)>0&&this.reportReceiptNumber(s)==='-').length;return{rows,expected,paid,open,paidCount,missingReceipt,overdue:rows.filter(s=>s.status!=='Pago'&&s.dueDate<this.today()).length,today:rows.filter(s=>s.status!=='Pago'&&s.dueDate===this.today()).length}}"
+          new_summary="get paymentSummary(){let rows=this.filteredPayments,ids=new Set(rows.map(s=>Number(s.id))),ledger=this.payments.filter(p=>ids.has(Number(p.serviceId))),paid=ledger.reduce((a,p)=>a+Number(p.amount||0),0),expected=rows.reduce((a,s)=>a+Number(s.amount||0),0),open=rows.reduce((a,s)=>a+this.balance(s),0),paidCount=ledger.length,missingReceipt=ledger.filter(p=>!p.receiptId).length;return{rows,expected,paid,open,paidCount,missingReceipt,overdue:rows.filter(s=>s.status!=='Pago'&&s.dueDate<this.today()).length,today:rows.filter(s=>s.status!=='Pago'&&s.dueDate===this.today()).length}}"
+          once(old_summary,new_summary,'payment summary')
+          old_recent="get paymentRecent(){return this.services.filter(s=>Number(s.paidValue||0)>0).sort((a,b)=>String(b.paymentDate||'').localeCompare(String(a.paymentDate||''))).slice(0,8)}"
+          new_recent="get paymentRecent(){return this.payments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.id||0)-Number(a.id||0)).slice(0,8).map(p=>{let service=this.services.find(s=>Number(s.id)===Number(p.serviceId))||null,receipt=p.receiptId?this.receipts.find(r=>Number(r.id)===Number(p.receiptId))||null:null;return{...p,service,receipt,providerId:p.providerId??service?.providerId,paymentDate:p.date,paymentMethod:p.method,paidValue:Number(p.amount||0)}})}"
+          once(old_recent,new_recent,'recent payments')
+          once('async issueReceipt(){','async issueReceipt(paymentId=null){','receipt signature')
+          old_pick=",payment=candidates[0]||null;if(payment&&Number(payment.amount||0)>pending+0.009)"
+          new_pick=",payment=paymentId?(candidates.find(p=>Number(p.id)===Number(paymentId))||null):(candidates[0]||null);if(paymentId&&!payment)return this.toast('Este pagamento já possui recibo ou não está disponível para emissão.','warning');if(payment&&Number(payment.amount||0)>pending+0.009)"
+          once(old_pick,new_pick,'exact payment receipt selection')
+          anchor="prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()},"
+          helper="prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()},async recentPaymentReceipt(p){if(this.isViewer||!p||!p.service)return;if(p.receipt){this.currentReceipt=p.receipt;this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),220);return}this.receiptServiceId=p.service.id;await this.issueReceipt(p.id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260)},"
+          once(anchor,helper,'recent payment receipt helper')
+          old_html='''<template x-for="s in paymentRecent" :key="'recent-pay-'+s.id">
+                <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3"><div><p class="font-black text-sm" x-text="providerName(s.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(s.paymentDate)+' • '+(s.paymentMethod||'forma não informada')"></p></div><p class="font-black text-emerald-700" x-text="money(s.paidValue||0)"></p></div>
+                  <div class="flex flex-wrap gap-2 mt-2"><button @click="quickReceipt(s)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></button><button @click="openSearchService(s)" class="mini">Serviço</button><button @click="openDeletePaymentModal(s)" class="danger" :disabled="isViewer || Number(s.paidValue||0)<=0">Excluir pagamento</button></div>
+                </div>
+              </template>'''
+          new_html='''<template x-for="p in paymentRecent" :key="'recent-pay-'+p.id">
+                <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3"><div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.paymentDate)+' • '+(p.paymentMethod||'forma não informada')"></p></div><p class="font-black text-emerald-700" x-text="money(p.paidValue||0)"></p></div>
+                  <div class="flex flex-wrap gap-2 mt-2"><button @click="recentPaymentReceipt(p)" class="mini" :disabled="isViewer || !p.service" x-text="p.receipt?'Ver recibo':'Emitir recibo'"></button><button @click="p.service && openSearchService(p.service)" class="mini" :disabled="!p.service">Serviço</button><button @click="p.service && openDeletePaymentModal(p.service)" class="danger" :disabled="isViewer || !p.service" title="Exclui todos os pagamentos deste lançamento">Excluir todos</button></div>
+                </div>
+              </template>'''
+          once(old_html,new_html,'recent payments html')
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8')
+          old='recibocondo-v102-provider-totals'; new='recibocondo-v103-payment-ledger-ui'
+          if w.count(old)!=1: raise SystemExit(f'cache marker expected once, got {w.count(old)}')
+          sw.write_text(w.replace(old,new,1),encoding='utf-8')
+          checks={
+            'summary uses ledger':'ledger=this.payments.filter' in s,
+            'payment count is event count':'paidCount=ledger.length' in s,
+            'missing receipt is per payment':'missingReceipt=ledger.filter(p=>!p.receiptId).length' in s,
+            'recent list uses ledger':'get paymentRecent(){return this.payments.slice()' in s,
+            'recent receipt exact':'async recentPaymentReceipt(p)' in s and 'await this.issueReceipt(p.id)' in s,
+            'issueReceipt accepts exact payment':'async issueReceipt(paymentId=null)' in s and 'candidates.find(p=>Number(p.id)===Number(paymentId))' in s,
+            'destructive label explicit':'>Excluir todos</button>' in s,
+            'cache v103':'recibocondo-v103-payment-ledger-ui' in sw.read_text(encoding='utf-8')
+          }
+          a=s.find("const db=new Dexie('ReciboCondoPrestadoresDB');"); b=s.find('</script>',a)
+          if a<0 or b<0: raise SystemExit('app script not found')
+          with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f: f.write(s[a:b]); name=f.name
+          checks['JS syntax']=subprocess.run(['node','--check',name],capture_output=True,text=True).returncode==0
+          print('\n'.join(('PASS' if v else 'FAIL')+' | '+k for k,v in checks.items()))
+          if not all(checks.values()): raise SystemExit('v103 verification failed')
+          PY
+      - name: Commit v103
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html sw.js
+          git commit -m "v103: make payment center use individual ledger events"
+          git push
