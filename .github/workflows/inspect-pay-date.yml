@@ -1,0 +1,27 @@
+name: Auditar data do pagamento
+on:
+  push:
+    branches: [audit/provider-duplicates]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          keys=['pay(s){','async pay(s){','confirmPay','confirmPayment','savePayment','paymentModal']
+          out=[]
+          for k in keys:
+            i=s.find(k)
+            if i>=0: out.append('===== '+k+' =====\n'+s[max(0,i-500):i+3500])
+          Path('pay-date-inspection.txt').write_text('\n\n'.join(out))
+          PY
+          git config user.name 'ReciboCondo Audit'
+          git config user.email 'actions@users.noreply.github.com'
+          git add pay-date-inspection.txt
+          git commit -m 'Inspect payment date handling' || exit 0
+          git push
