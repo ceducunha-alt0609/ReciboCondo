@@ -1,0 +1,70 @@
+===== pay(s){ =====
+ts,db.services,async()=>{for(const r of linked)await db.receipts.delete(r.id);await db.services.update(id,{paidValue:0,paymentDate:'',paymentMethod:'',status:'Pendente'})});for(const r of linked)await this.logAction('delete','Recibo removido por exclusão de pagamento','Nº '+r.number+' • '+(r.providerName||this.providerName(s.providerId)));await this.logAction('delete','Pagamento excluído; lançamento mantido',this.providerName(s.providerId)+' • '+this.money(s.paidValue||0));await this.load()},
+  pay(s){this.paymentTarget=s;this.payment={date:this.today(),value:this.balance(s),method:'PIX'};this.payModal=true},async savePayment(){if(this.isViewer)return;let s=this.paymentTarget,value=Number(this.payment.value||0),remaining=Math.max(0,Number(s.amount||0)-Number(s.paidValue||0));if(value<=0)return this.toast('Informe um valor de pagamento maior que zero.','warning');if(value>remaining+0.000001)return this.toast('O pagamento não pode ser maior que o saldo pendente de '+this.money(remaining)+'.','warning');let paid=Number(s.paidValue||0)+value,status=paid>=Number(s.amount)?'Pago':'Parcial';await db.services.update(s.id,{paidValue:paid,paymentDate:this.payment.date,paymentMethod:this.payment.method,status});await this.logAction('payment','Pagamento registrado',this.providerName(s.providerId)+' • '+this.money(value)+' • '+this.payment.method);this.payModal=false;await this.load();this.toast(status==='Pago'?'Pagamento registrado. Lançamento quitado.':'Pagamento parcial registrado. Saldo restante: '+this.money(Math.max(0,Number(s.amount||0)-paid)))},prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()},async quickReceipt(s){if(this.isViewer)return;if(Number(s.paidValue||0)<=0)return this.toast('Registre o pagamento antes de emitir o recibo.','warning');let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),pending=Math.max(0,Number(s.paidValue||0)-issued);if(pending<=0){let latest=linked.slice().sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];if(latest){this.currentReceipt=latest;this.view='recibos';this.after();this.toast('Todos os pagamentos registrados já possuem recibo.','warning');setTimeout(()=>this.printReceipt(),220)}else this.toast('Não há valor pago pendente de recibo.','warning');return}this.receiptServiceId=s.id;await this.issueReceipt();this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260)},async issueReceipt(){if(this.isViewer)return;let s=this.services.find(x=>Number(x.id)===Number(this.receiptServiceId));if(!s)return this.toast('Selecione um lançamento.','warning');let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),pending=Math.max(0,Number(s.paidValue||0)-issued);if(pending<=0)return this.toast('Todos os pagamentos registrados deste lançamento já possuem recibo.','warning');let desc=String(s.description||'').replace(/(\bparcela\s+)(\d+)\s*\/\s*(\d+)/i,(m,prefix,current,total)=>prefix+String(linked.length+1).padStart(current.length,'0')+'/'+total);let p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{};let meta=await db.meta.get('receiptSeq'),next=Math.max(Number(meta?.value||0),this.receiptMaxNumber())+1;await db.meta.put({key:'receiptSeq',value:next});let r={number:String(next).padStart(6,'0'),date:this.today(),paymentDate:s.paymentDate||this.today(),providerId:p.id,providerName:p.name||'Prestador não informado',document:p.document||'',category:s.category,reference:s.reference,description:desc,total:pending,paymentMethod:s.paymentMethod||'Não informado',location:s.location,serviceId:s.id,manager:this.settings.manager,condoName:this.settings.condoName,condoCnpj:this.settings.cnpj||'',condoAddress:this.settings.address||''};let id=await db.receipts.add(r);r.id=id;this.currentReceipt=r;await this.logAction('receipt','Recibo emitido','Nº '+r.number+' • '+r.providerName+' • '+this.money(r.total||0));await this.load();this.toast('
+
+===== savePayment =====
+n><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+          </div>
+          <div class="grid sm:grid-cols-3 gap-2">
+            <button @click="payment.value=paymentTarget?balance(paymentTarget):0" class="secondary" type="button">Valor em aberto</button>
+            <button @click="payment.value=paymentTarget?Number(paymentTarget.amount||0):0" class="secondary" type="button">Valor integral</button>
+            <button @click="savePayment" class="primary" :disabled="isViewer">Registrar pagamento</button>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="actionModal.open" class="no-print fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4">
+        <div class="glass rounded-3xl p-5 w-full max-w-md space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="h-11 w-11 rounded-2xl grid place-items-center text-white shadow-soft" :class="actionModal.tone==='danger' ? 'bg-red-600' : 'bg-gradient-to-br from-rc-800 to-rc-500'">
+              <i :data-lucide="actionModal.icon || (actionModal.tone==='danger' ? 'trash-2' : 'copy-plus')" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-black text-xl" x-text="actionModal.title"></h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400" x-text="actionModal.subtitle"></p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/25 p-3 text-sm space-y-1">
+            <template x-for="d in actionModal.details" :key="d.label">
+              <p><b x-text="d.label + ':'"></b> <span x-text="d.value"></span></p>
+            </template>
+          </div>
+
+          <p class="text-xs text-slate-500 dark:text-slate-400" x-text="actionModal.note"></p>
+
+          <div class="flex gap-2">
+            <button @click="confirmActionModal" class="flex-1" :class="actionModal.tone==='danger' ? 'danger' : 'primary'" x-text="actionModal.confirmLabel"></button>
+            <button @click="closeActionModal" class="secondary">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="no-print fixed top-4 right-4 z-[80] w-[min(92vw,390px)] space-y-3 pointer-events-none">
+        <template x-for="t in toasts" :key="t.id">
+          <div x-transition.opacity.scale.origin.top.right class="pointer-events-auto rounded-3xl border bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-premium overflow-hidden" :class="t.border">
+            <div class="h-1" :class="t.bar"></div>
+            <div class="p-4 flex gap-3 items-start">
+              <div class="h-10 w-10 rounded-2xl grid place-items-center text-white shrink-0" :class="t.iconBg">
+                <i :data-lucide="t.icon" class="w-5 h-5"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="font-black text-sm text-slate-900 dark:text-white" x-text="t.title"></p>
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mt-1" x-text="t.message"></p>
+              </div>
+              <button @click="dismissToast(t.id)" class="h-8 w-8 rounded-xl grid place-items-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <section class="print-area">
+        <div id="receiptPrint" class="receipt receipt-premium" x-show="currentReceipt">
+          <div class="receipt-watermark">ReciboCondo</div>
+          <div class="pt-7 relative z-10">
+            <div class="flex justify-between gap-6 items-start border-b border-slate-300 pb-5 mb-5">
+              <div class="flex gap-4 items-center">
+                <template x-if="settings.logo"><img :src="settings.logo" class="receipt-app-logo" alt="Logotipo do condomínio"></template>
+            
