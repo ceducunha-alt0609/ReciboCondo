@@ -1,0 +1,12 @@
+1 | get reportRows(){
+1 | get reportTotals(){
+0 | get reportDetailRows(){
+1 | <section x-show="view==='relatorios'"
+1 | <div class="glass rounded-3xl p-4 overflow-auto scrollbar">
+2 | x-for="s in reportRows" :key="s.id"
+2 | x-text="reportReceiptNumber(s)"
+3 | x-text="money(s.paidValue||0)"
+1 | x-text="reportRows.length"
+1 | <table class="report-table mb-5">
+2 | x-text="money(s.paidValue || s.amount)"
+0 | this.reportRows.map(s=>[s.serviceDate,s.paymentDate||'',this.providerName(s.providerId),s.category,s.description,s.amount,s.paidValue||0,s.status])
