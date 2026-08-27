@@ -1,0 +1,45 @@
+name: Proteger restauracao de backup
+on:
+  push:
+    branches: [audit/restore-preflight-guard]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aplicar validacao previa da restauracao
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html'); s=p.read_text()
+          old_start=s.find('async backup(){')
+          restore_start=s.find('async restore(ev){', old_start)
+          clear_start=s.find('async clearAllInternal(){', restore_start)
+          if min(old_start, restore_start, clear_start) < 0:
+              raise SystemExit('Rotinas de backup/restore nao encontradas')
+          backup=s[old_start:restore_start]
+          if 'backupFormat:' not in backup:
+              backup=backup.replace("let data={settings:this.settings,", "let data={app:'ReciboCondo',backupFormat:2,settings:this.settings,", 1)
+          new_restore="""async restore(ev){let f=ev.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(!data||typeof data!=='object'||Array.isArray(data))throw new Error('Backup inválido');let known=['settings','providers','services','receipts','recurrences','logs','receiptSeq','backupStats','exportedAt','backupFormat','app'].some(k=>Object.prototype.hasOwnProperty.call(data,k));if(!known)throw new Error('O arquivo não parece ser um backup do ReciboCondo.');let providers=Array.isArray(data.providers)?data.providers:[],services=Array.isArray(data.services)?data.services:[],receipts=Array.isArray(data.receipts)?data.receipts:[],recurrences=Array.isArray(data.recurrences)?data.recurrences:[],logs=Array.isArray(data.logs)?data.logs:[];let duplicateIds=(arr)=>{let ids=arr.map(x=>x&&x.id).filter(x=>x!==undefined&&x!==null),set=new Set(ids.map(String));return set.size!==ids.length};if(duplicateIds(providers)||duplicateIds(services)||duplicateIds(receipts)||duplicateIds(recurrences))throw new Error('O backup contém IDs duplicados e não será restaurado.');let providerIds=new Set(providers.map(x=>String(x?.id)).filter(x=>x!=='undefined'&&x!=='null')),serviceIds=new Set(services.map(x=>String(x?.id)).filter(x=>x!=='undefined'&&x!=='null'));let badService=services.find(x=>x?.providerId!==undefined&&x?.providerId!==null&&!providerIds.has(String(x.providerId)));if(badService)throw new Error('O backup contém lançamento sem prestador correspondente.');let badReceipt=receipts.find(x=>(x?.serviceId!==undefined&&x?.serviceId!==null&&!serviceIds.has(String(x.serviceId)))||(x?.providerId!==undefined&&x?.providerId!==null&&!providerIds.has(String(x.providerId))));if(badReceipt)throw new Error('O backup contém recibo sem lançamento ou prestador correspondente.');let badRecurrence=recurrences.find(x=>x?.providerId!==undefined&&x?.providerId!==null&&!providerIds.has(String(x.providerId)));if(badRecurrence)throw new Error('O backup contém recorrência sem prestador correspondente.');let total=providers.length+services.length+receipts.length+recurrences.length+logs.length;if(!window.confirm('Restaurar este backup?\\n\\n'+providers.length+' prestador(es) • '+services.length+' lançamento(s) • '+receipts.length+' recibo(s) • '+recurrences.length+' recorrência(s)\\n\\nA base operacional atual será substituída.')){ev.target.value='';return}await db.transaction('rw',db.providers,db.services,db.receipts,db.recurrences,db.logs,db.settings,db.meta,async()=>{await db.providers.clear();await db.services.clear();await db.receipts.clear();await db.recurrences.clear();await db.logs.clear();if(data.settings){let restoredSettings=JSON.parse(JSON.stringify(data.settings));await db.settings.put({key:'main',value:restoredSettings});this.settings=restoredSettings}if(providers.length)await db.providers.bulkAdd(providers);if(services.length)await db.services.bulkAdd(services);if(receipts.length)await db.receipts.bulkAdd(receipts);if(recurrences.length)await db.recurrences.bulkAdd(recurrences);if(logs.length)await db.logs.bulkAdd(logs.map(l=>{let x={...l};delete x.id;return x}).slice(0,200));let restoredMax=receipts.reduce((m,r)=>r.source==='Excel legado'?m:Math.max(m,Number(String(r.number||'').replace(/\\D/g,'')||0)),0),safeSeq=Math.max(Number(data.receiptSeq||0),restoredMax);await db.meta.put({key:'receiptSeq',value:safeSeq})});await this.logAction('restore','Backup restaurado','Dados restaurados por arquivo JSON • '+total+' registros validados.');await this.load();this.toast('Backup restaurado com sucesso!')}catch(e){console.error(e);this.toast('Não foi possível restaurar o backup: '+e.message,'error')}finally{ev.target.value=''}},"""
+          s=s[:old_start]+backup+new_restore+s[clear_start:]
+          p.write_text(s)
+          sw=Path('sw.js'); w=sw.read_text()
+          w2=re.sub(r"const CACHE_NAME = 'recibocondo-v[^']+';", "const CACHE_NAME = 'recibocondo-v87-restore-preflight';", w, count=1)
+          if w2==w: raise SystemExit('Cache nao atualizado')
+          sw.write_text(w2)
+          # verificacoes simples
+          out=p.read_text()
+          checks=['backupFormat:2','O arquivo não parece ser um backup do ReciboCondo.','IDs duplicados','window.confirm(\'Restaurar este backup?','finally{ev.target.value=\'\'}']
+          missing=[x for x in checks if x not in out]
+          if missing: raise SystemExit('Validacao falhou: '+repr(missing))
+          PY
+      - name: Commit
+        run: |
+          git config user.name 'ReciboCondo Restore Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          git commit -m 'Validate backups before destructive restore' || exit 0
+          git push
