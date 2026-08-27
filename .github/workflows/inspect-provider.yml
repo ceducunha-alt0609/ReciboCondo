@@ -1,0 +1,31 @@
+name: Auditar cadastro de prestadores
+on:
+  push:
+    branches: [audit/provider-duplicates]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          terms=['saveProvider','providerForm','editProvider','db.providers.put','db.providers.add','document','pix','whatsapp']
+          out=[]
+          for term in terms:
+            pos=0
+            while True:
+              i=s.find(term,pos)
+              if i<0: break
+              out.append(f'===== {term} @ {i} =====\n'+s[max(0,i-1600):i+4200])
+              pos=i+len(term)
+          Path('provider-inspection.txt').write_text('\n\n'.join(out))
+          PY
+          git config user.name 'ReciboCondo Audit'
+          git config user.email 'actions@users.noreply.github.com'
+          git add provider-inspection.txt
+          git commit -m 'Inspect provider creation and editing' || exit 0
+          git push
