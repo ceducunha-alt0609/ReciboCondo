@@ -1,0 +1,19 @@
+ReciboCondo v101 verification
+============================
+
+PASS | Dexie v4 payments store
+PASS | payments loaded into app state
+PASS | atomic per-service legacy migration
+PASS | new payments written individually
+PASS | receipt linked to exact payment
+PASS | deleting receipt preserves payment
+PASS | reports use payment ledger
+PASS | dashboard paid rows use ledger
+PASS | backup format 3 includes payments
+PASS | restore validates payments
+PASS | clear-all clears payments
+PASS | integrity audit compares ledger and paid total
+PASS | cache v101 active
+PASS | JavaScript syntax valid
+
+RESULT | 14/14 checks passed
