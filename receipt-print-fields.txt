@@ -1,0 +1,15 @@
+FIELDS: 
+
+EXPRESSIONS:
+currentReceipt
+currentReceipt?.category
+currentReceipt?.date)
+currentReceipt?.description
+currentReceipt?.document || 'não informado'
+currentReceipt?.location || '-'
+currentReceipt?.number
+currentReceipt?.paymentDate || currentReceipt?.date)
+currentReceipt?.paymentMethod || 'Não informado'
+currentReceipt?.providerName
+currentReceipt?.reference)
+currentReceipt?.total)
