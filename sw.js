@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v100-integrity-cleanup';
+const CACHE_NAME = 'recibocondo-v101-payment-ledger';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
