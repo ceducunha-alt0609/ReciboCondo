@@ -35,8 +35,8 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           p=Path('sw.js'); s=p.read_text(encoding='utf-8')
-          old="const CACHE_NAME = 'recibocondo-v75-installment-description';"
-          new="const CACHE_NAME = 'recibocondo-v76-restore-dataclone';"
+          old="const CACHE_NAME = 'recibocondo-v74-installment-description';"
+          new="const CACHE_NAME = 'recibocondo-v75-restore-dataclone';"
           if s.count(old)!=1:
               raise SystemExit(f'cache esperado encontrado {s.count(old)} vez(es)')
           p.write_text(s.replace(old,new,1),encoding='utf-8')
