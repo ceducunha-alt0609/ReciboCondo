@@ -1,0 +1,38 @@
+name: Inspecionar integridade e inicializacao
+on:
+  push:
+    branches: [audit/integrity-startup-guard]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair rotinas criticas
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          terms=['async load','load(){','backupHealthLabel','backupHint','nextReceipt','receiptSeq','receiptNumber','rc_receipt','settings','db.settings','serviceId','paidValue','receipts.reduce','receipts.map','init','x-init']
+          out=[]
+          seen=set()
+          for term in terms:
+              pos=0
+              while True:
+                  i=s.find(term,pos)
+                  if i<0: break
+                  key=(term,i)
+                  if key not in seen:
+                      out.append('\n===== '+term+' @ '+str(i)+' =====\n'+s[max(0,i-1800):i+4200])
+                      seen.add(key)
+                  pos=i+len(term)
+          Path('integrity-inspection.txt').write_text('\n'.join(out))
+          PY
+      - name: Commit diagnostico
+        run: |
+          git config user.name 'ReciboCondo Integrity Audit'
+          git config user.email 'actions@users.noreply.github.com'
+          git add integrity-inspection.txt
+          git commit -m 'Inspect startup and data integrity guards' || exit 0
+          git push
