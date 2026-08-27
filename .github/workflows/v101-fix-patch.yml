@@ -1,0 +1,22 @@
+name: v101 fix patch runner
+on:
+  push:
+    paths:
+      - '.github/workflows/v101-fix-patch.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python tools/v101_patch_fixer.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/v101_patch.py
+          git commit -m "Fix v101 patch replacement escaping"
+          git push
