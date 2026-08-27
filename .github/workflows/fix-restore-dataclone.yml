@@ -1,0 +1,51 @@
+name: Corrigir DataClone na restauracao
+on:
+  push:
+    branches: [fix/restore-dataclone]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/restore-dataclone
+      - name: Gravar settings sempre como objeto simples
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old1="async saveSettings(){await db.settings.put({key:'main',value:this.settings});"
+          new1="async saveSettings(){let plainSettings=JSON.parse(JSON.stringify(this.settings));await db.settings.put({key:'main',value:plainSettings});"
+          if s.count(old1)!=1:
+              raise SystemExit(f'saveSettings esperado 1x, encontrado {s.count(old1)}')
+          s=s.replace(old1,new1,1)
+          old2="if(data.settings){this.settings=data.settings;await db.settings.put({key:'main',value:this.settings})}"
+          new2="if(data.settings){let restoredSettings=JSON.parse(JSON.stringify(data.settings));await db.settings.put({key:'main',value:restoredSettings});this.settings=restoredSettings}"
+          if s.count(old2)!=1:
+              raise SystemExit(f'restore settings esperado 1x, encontrado {s.count(old2)}')
+          s=s.replace(old2,new2,1)
+          p.write_text(s,encoding='utf-8')
+          print('settings proxy removido do caminho IndexedDB')
+          PY
+      - name: Renovar cache
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js'); s=p.read_text(encoding='utf-8')
+          old="const CACHE_NAME = 'recibocondo-v75-installment-description';"
+          new="const CACHE_NAME = 'recibocondo-v76-restore-dataclone';"
+          if s.count(old)!=1:
+              raise SystemExit(f'cache esperado encontrado {s.count(old)} vez(es)')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit final
+        run: |
+          rm -f .github/workflows/inspect-restore.yml .github/workflows/fix-restore-dataclone.yml restore-inspection.txt
+          git config user.name 'ReciboCondo Restore Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Fix DataCloneError when saving and restoring settings'
+          git push origin HEAD:fix/restore-dataclone
