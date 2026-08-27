@@ -1,31 +1,38 @@
-name: Auditar estado apos limpeza
+name: Corrigir estado apos limpeza
 on:
   push:
     branches: [audit/duplicate-service]
 permissions:
   contents: write
 jobs:
-  inspect:
+  fix:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - name: Limpar referencias temporarias
+        run: |
           python3 - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text()
-          terms=['async load()','currentReceipt','selectedProviderId','receiptServiceId','clearAllInternal']
-          out=[]
-          for term in terms:
-            pos=0
-            while True:
-              i=s.find(term,pos)
-              if i<0: break
-              out.append(f'===== {term} @ {i} =====\n'+s[max(0,i-1500):i+3500])
-              pos=i+len(term)
-          Path('clear-state-inspection.txt').write_text('\n\n'.join(out))
+          import re
+          p=Path('index.html'); s=p.read_text()
+          old="async clearAllInternal(){await db.transaction('rw',db.providers,db.services,db.receipts,db.recurrences,db.logs,async()=>{await db.providers.clear();await db.services.clear();await db.receipts.clear();await db.recurrences.clear();await db.logs.clear()});await this.load()}"
+          new="async clearAllInternal(){await db.transaction('rw',db.providers,db.services,db.receipts,db.recurrences,db.logs,async()=>{await db.providers.clear();await db.services.clear();await db.receipts.clear();await db.recurrences.clear();await db.logs.clear()});this.selectedProviderId=null;this.currentReceipt=null;this.receiptServiceId='';this.paymentTarget=null;this.payModal=false;await this.load()}"
+          if old not in s: raise SystemExit('Rotina clearAllInternal nao encontrada no formato esperado')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          sw=Path('sw.js'); w=sw.read_text()
+          w2=re.sub(r"const CACHE_NAME = 'recibocondo-v[^']+';", "const CACHE_NAME = 'recibocondo-v89-clear-state';", w, count=1)
+          if w2==w: raise SystemExit('Cache nao atualizado')
+          sw.write_text(w2)
+          out=p.read_text()
+          checks=["this.selectedProviderId=null","this.currentReceipt=null","this.receiptServiceId=''","this.paymentTarget=null","this.payModal=false"]
+          missing=[x for x in checks if x not in out]
+          if missing: raise SystemExit('Limpeza incompleta: '+repr(missing))
           PY
-          git config user.name 'ReciboCondo Audit'
+      - name: Commit
+        run: |
+          git config user.name 'ReciboCondo Guard'
           git config user.email 'actions@users.noreply.github.com'
-          git add clear-state-inspection.txt
-          git commit -m 'Inspect transient state after data clearing' || exit 0
+          git add index.html sw.js
+          git commit -m 'Clear transient UI state with operational data' || exit 0
           git push
