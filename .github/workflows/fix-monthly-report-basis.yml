@@ -1,0 +1,39 @@
+name: Corrigir base temporal do relatorio mensal
+on:
+  push:
+    branches: [audit/provider-duplicates]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html'); s=p.read_text()
+          old="get reportDetailRows(){let rows=[];for(const s of this.reportRows){let rs=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)).sort((a,b)=>(Number(String(a.number||'').replace(/\\D/g,''))||0)-(Number(String(b.number||'').replace(/\\D/g,''))||0)),sum=0;for(const r of rs){let v=Number(r.total||0);sum+=v;rows.push({...s,reportKey:'r-'+r.id,receiptNumber:r.number||'-',paymentDate:r.paymentDate||r.date||s.paymentDate,description:r.description||s.description,reportValue:v,paymentMethod:r.paymentMethod||s.paymentMethod||''})}let u=Math.max(0,Number(s.paidValue||0)-sum);if(u>0)rows.push({...s,reportKey:'u-'+s.id,receiptNumber:'PENDENTE',paymentDate:s.paymentDate,description:s.description,reportValue:u,paymentMethod:s.paymentMethod||''});if(!rs.length&&u<=0)rows.push({...s,reportKey:'s-'+s.id,receiptNumber:'-',description:s.description,reportValue:Number(s.paidValue||s.amount||0),paymentMethod:s.paymentMethod||''})}return rows},get reportTotals(){let e=this.reportRows.reduce((a,s)=>a+Number(s.amount||0),0),p=this.reportRows.reduce((a,s)=>a+Number(s.paidValue||0),0);return{expected:e,paid:p,open:e-p}}"
+          new="get reportDetailRows(){let rows=[],inPeriod=d=>(!this.report.from||String(d||'')>=this.report.from)&&(!this.report.to||String(d||'')<=this.report.to),services=this.services.filter(s=>(this.report.category==='todas'||s.category===this.report.category)&&(this.report.status==='todos'||s.status===this.report.status));for(const s of services){let rs=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)).sort((a,b)=>(Number(String(a.number||'').replace(/\\D/g,''))||0)-(Number(String(b.number||'').replace(/\\D/g,''))||0)),sum=rs.reduce((a,r)=>a+Number(r.total||0),0);for(const r of rs){let pd=r.paymentDate||r.date||s.paymentDate||'';if(inPeriod(pd))rows.push({...s,reportKey:'r-'+r.id,receiptNumber:r.number||'-',paymentDate:pd,description:r.description||s.description,reportValue:Number(r.total||0),paymentMethod:r.paymentMethod||s.paymentMethod||''})}let u=Math.max(0,Number(s.paidValue||0)-sum);if(u>0&&inPeriod(s.paymentDate))rows.push({...s,reportKey:'u-'+s.id,receiptNumber:'PENDENTE',paymentDate:s.paymentDate,description:s.description,reportValue:u,paymentMethod:s.paymentMethod||''});if(!rs.length&&u<=0&&inPeriod(s.serviceDate))rows.push({...s,reportKey:'s-'+s.id,receiptNumber:'-',paymentDate:'',description:s.description,reportValue:0,paymentMethod:s.paymentMethod||''})}return rows.sort((a,b)=>String(a.paymentDate||a.serviceDate||'').localeCompare(String(b.paymentDate||b.serviceDate||''))||String(a.receiptNumber||'').localeCompare(String(b.receiptNumber||'')))},get reportTotals(){let e=this.reportRows.reduce((a,s)=>a+Number(s.amount||0),0),p=this.reportDetailRows.reduce((a,s)=>a+Number(s.reportValue||0),0),o=this.reportRows.reduce((a,s)=>a+this.balance(s),0);return{expected:e,paid:p,open:o}}"
+          if old not in s: raise SystemExit('Getters do relatorio nao encontrados')
+          s=s.replace(old,new,1)
+          s=s.replace('<span>Total lançado</span>','<span>Lançado no período</span>',1)
+          s=s.replace('<span>Total pago</span>','<span>Pago no período</span>',1)
+          s=s.replace('<span>Em aberto</span>','<span>Em aberto dos lançamentos</span>',1)
+          s=s.replace('<p class="label">Total lançado</p>','<p class="label">Lançado no período</p>',1)
+          s=s.replace('<p class="label">Total pago</p>','<p class="label">Pago no período</p>',1)
+          s=s.replace('<p class="label">Em aberto</p>','<p class="label">Em aberto dos lançamentos</p>',1)
+          p.write_text(s)
+          sw=Path('sw.js'); w=sw.read_text()
+          w2=re.sub(r"const CACHE_NAME = 'recibocondo-v[^']+';", "const CACHE_NAME = 'recibocondo-v96-report-payment-date';", w, count=1)
+          if w2==w: raise SystemExit('Cache nao atualizado')
+          sw.write_text(w2)
+          for needle in ['p=this.reportDetailRows.reduce','reportValue:0','Pago no período','v96-report-payment-date']:
+            if needle not in (s+w2): raise SystemExit('Validacao falhou: '+needle)
+          PY
+          git config user.name 'ReciboCondo Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          git commit -m 'Use payment dates in monthly report detail and totals' || exit 0
+          git push
