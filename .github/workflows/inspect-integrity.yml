@@ -1,34 +1,48 @@
-name: Inspecionar integridade e inicializacao
+name: Aplicar vigia de integridade
 on:
   push:
     branches: [audit/integrity-startup-guard]
 permissions:
   contents: write
 jobs:
-  inspect:
+  guard:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extrair rotinas criticas
+      - name: Aplicar vigia nao destrutivo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          if 'auditDataIntegrity(){' in s:
+              print('Vigia já aplicado; nada a fazer.')
+              raise SystemExit(0)
+          old="async load(){this.providers=await db.providers.toArray();this.services=await db.services.toArray();this.receipts=await db.receipts.toArray();this.recurrences=await db.recurrences.toArray();this.logs=(await db.logs.orderBy('at').reverse().limit(30).toArray());let meta=await db.meta.get('receiptSeq');this.receiptSeqValue=Number(meta?.value||0);if(!this.receiptSeqInput)this.receiptSeqInput=this.nextReceiptNumber();this.after()},"
+          new="async load(){this.providers=await db.providers.toArray();this.services=await db.services.toArray();this.receipts=await db.receipts.toArray();this.recurrences=await db.recurrences.toArray();this.logs=(await db.logs.orderBy('at').reverse().limit(30).toArray());let meta=await db.meta.get('receiptSeq');this.receiptSeqValue=Number(meta?.value||0);if(!this.receiptSeqInput)this.receiptSeqInput=this.nextReceiptNumber();this.after();this.auditDataIntegrity()},auditDataIntegrity(){let issues=[],providerIds=new Set(this.providers.map(p=>Number(p.id))),serviceIds=new Set(this.services.map(s=>Number(s.id))),modernReceipts=this.receipts.filter(r=>r.source!=='Excel legado'),records=this.providers.length+this.services.length+this.receipts.length+this.recurrences.length;for(const s of this.services){if(s.providerId!=null&&s.providerId!==''&&!providerIds.has(Number(s.providerId)))issues.push('Lançamento '+(s.id||'?')+' aponta para prestador inexistente.')}for(const r of modernReceipts){if(r.serviceId!=null&&r.serviceId!==''&&!serviceIds.has(Number(r.serviceId)))issues.push('Recibo '+(r.number||r.id||'?')+' aponta para lançamento inexistente.');if(r.providerId!=null&&r.providerId!==''&&!providerIds.has(Number(r.providerId)))issues.push('Recibo '+(r.number||r.id||'?')+' aponta para prestador inexistente.')}let seen=new Set();for(const r of modernReceipts){let n=String(r.number||'').replace(/\\D/g,'');if(!n)continue;if(seen.has(n))issues.push('Número de recibo duplicado: '+String(r.number||n)+'.');seen.add(n)}for(const s of this.services){let linked=modernReceipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),paid=Number(s.paidValue||0);if(linked.length&&issued>paid+0.009)issues.push('Recibos do lançamento '+(s.id||'?')+' somam '+this.money(issued)+' acima do pago '+this.money(paid)+'.')}let condo=String(this.settings?.condoName||'').trim(),manager=String(this.settings?.manager||'').trim();if(records>0&&(!condo||!manager))issues.push('Há dados operacionais, mas os dados principais do condomínio estão incompletos.');let max=this.receiptMaxNumber();if(Number(this.receiptSeqValue||0)<max)issues.push('Sequência gravada está atrás do maior recibo; o próximo número continua protegido pelo maior recibo existente.');this.integrityIssues=issues;if(!issues.length)return;let signature=issues.join('|'),key='rc_integrity_warning_signature';if(sessionStorage.getItem(key)===signature)return;sessionStorage.setItem(key,signature);console.warn('[ReciboCondo] Auditoria de integridade:',issues);this.toast('Vigia de integridade encontrou '+issues.length+' alerta(s). Nenhum dado foi alterado.','warning')},"
+          count=s.count(old)
+          if count!=1:
+              raise SystemExit(f'Abortado: assinatura de load encontrada {count} vez(es), esperado 1.')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          if 'auditDataIntegrity(){' not in s or 'Nenhum dado foi alterado' not in s:
+              raise SystemExit('Falha de validação após alteração.')
+          print('Vigia aplicado com sucesso.')
+          PY
+      - name: Validar alteracao
         run: |
           python3 - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text()
-          terms=['async load','load(){','backupHealthLabel','backupHint','nextReceipt','receiptSeq','receiptNumber','rc_receipt','settings','db.settings','serviceId','paidValue','receipts.reduce','receipts.map','init','x-init']
-          out=[]
-          for term in terms:
-              pos=0
-              while True:
-                  i=s.find(term,pos)
-                  if i<0: break
-                  out.append('\n===== '+term+' @ '+str(i)+' =====\n'+s[max(0,i-1800):i+4200])
-                  pos=i+len(term)
-          Path('integrity-inspection.txt').write_text('\n'.join(out))
+          checks=['this.after();this.auditDataIntegrity()','auditDataIntegrity(){','Número de recibo duplicado','dados principais do condomínio estão incompletos','Nenhum dado foi alterado']
+          missing=[x for x in checks if x not in s]
+          if missing: raise SystemExit('Marcadores ausentes: '+repr(missing))
+          print('Validação textual OK.')
           PY
-      - name: Commit diagnostico
+      - name: Commit da protecao
         run: |
           git config user.name 'ReciboCondo Integrity Audit'
           git config user.email 'actions@users.noreply.github.com'
-          git add integrity-inspection.txt
-          git commit -m 'Inspect startup and data integrity guards' || exit 0
+          git add index.html
+          git commit -m 'Add non-destructive startup integrity guard' || exit 0
           git push
