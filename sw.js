@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v80-no-excel-import';
+const CACHE_NAME = 'recibocondo-v81-payment-receipt-guard';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
@@ -7,7 +7,6 @@ const APP_SHELL = [
   './manifest.json',
   './favicon.ico',
   './apple-touch-icon.png',
-  './assets/data/excel_legacy_import.json',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
   './assets/icons/icon-maskable-192.png',
