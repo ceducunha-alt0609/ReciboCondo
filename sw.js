@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v83-integrity-guard';
+const CACHE_NAME = 'recibocondo-v84-backup-panel';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
