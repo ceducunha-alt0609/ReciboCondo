@@ -1,0 +1,56 @@
+name: Corrigir exibicao recibo parcial
+on:
+  push:
+    branches: [fix/partial-receipt-pdf]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/partial-receipt-pdf
+      - name: Corrigir valor exibido no recibo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          # The stored receipt already has r.total=pending. Replace receipt print/display fallbacks
+          # that prefer the service amount with the receipt's own total.
+          candidates=[
+            ("this.money(s.amount||r.total||0)","this.money(r.total||0)"),
+            ("this.money(s.amount || r.total || 0)","this.money(r.total||0)"),
+            ("this.money(this.currentService?.amount||r.total||0)","this.money(r.total||0)"),
+            ("this.money(this.currentService?.amount || r.total || 0)","this.money(r.total||0)")
+          ]
+          changed=0
+          for old,new in candidates:
+            n=s.count(old)
+            if n:
+              s=s.replace(old,new); changed+=n
+          # Also catch direct receipt template total derived from service object in the receipt block only.
+          if changed==0:
+            raise SystemExit('Nenhum fallback service.amount -> receipt.total encontrado; abortando sem alterar.')
+          p.write_text(s)
+          print('substituicoes:',changed)
+          PY
+      - name: Renovar cache
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js'); s=p.read_text()
+          old="const CACHE_NAME = 'recibocondo-v73-final-consistency';"
+          new="const CACHE_NAME = 'recibocondo-v74-partial-receipt-display';"
+          if s.count(old)!=1: raise SystemExit('cache esperado nao encontrado exatamente uma vez')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Commit
+        run: |
+          rm -f .github/workflows/inspect-partial-receipt.yml .github/workflows/fix-partial-receipt-display.yml receipt-inspection.txt
+          git config user.name 'ReciboCondo Receipt Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Use receipt total when displaying partial receipts'
+          git push origin HEAD:fix/partial-receipt-pdf
