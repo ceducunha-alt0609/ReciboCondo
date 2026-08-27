@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v103-payment-ledger-ui';
+const CACHE_NAME = 'recibocondo-v104-individual-payment-delete';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
