@@ -1,0 +1,49 @@
+name: Blindar exclusao de lancamentos
+
+on:
+  push:
+    branches: [fix/transacoes-seguras-importacao]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/transacoes-seguras-importacao
+      - name: Impedir exclusao de lancamento com historico financeiro
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="async removeServiceInternal(id){let s=this.services.find(x=>Number(x.id)===Number(id));await db.services.delete(id);await this.logAction('delete','Lançamento excluído',s?this.providerName(s.providerId)+' • '+this.money(s.amount||0):('ID '+id));await this.load()}"
+          new="async removeServiceInternal(id){let s=this.services.find(x=>Number(x.id)===Number(id));if(!s)return;let linked=this.receipts.find(r=>Number(r.serviceId)===Number(id));if(linked||Number(s.paidValue||0)>0)return this.toast(linked?'Este lançamento possui o recibo nº '+linked.number+'. Exclua pelo fluxo de pagamento/recibo para preservar o histórico.':'Este lançamento possui pagamento registrado. Exclua pelo fluxo de pagamentos para preservar o histórico.','warning');await db.services.delete(id);await this.logAction('delete','Lançamento excluído',this.providerName(s.providerId)+' • '+this.money(s.amount||0));await this.load()}"
+          if s.count(old)!=1:
+              raise SystemExit(f'Patch abortado: exclusao de lancamento encontrada {s.count(old)} vez(es)')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Renovar cache do PWA
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js')
+          s=p.read_text(encoding='utf-8')
+          old="const CACHE_NAME = 'recibocondo-v66-runtime-receipt-guard';"
+          new="const CACHE_NAME = 'recibocondo-v67-service-delete-guard';"
+          if s.count(old)!=1:
+              raise SystemExit(f'Patch abortado: cache esperado encontrado {s.count(old)} vez(es)')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit da correcao e remover workflow temporario
+        run: |
+          rm -f .github/workflows/service-delete-guard.yml
+          git config user.name "ReciboCondo History Guard"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html sw.js .github/workflows/service-delete-guard.yml
+          git commit -m "Prevent deleting services with payment or receipt history"
+          git push origin HEAD:fix/transacoes-seguras-importacao
