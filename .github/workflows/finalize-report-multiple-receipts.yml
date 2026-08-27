@@ -1,0 +1,90 @@
+name: Finalizar relatorio com multiplos recibos
+on:
+  push:
+    branches: [fix/report-multiple-receipts]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/report-multiple-receipts
+      - name: Aplicar detalhamento por recibo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          a=s.find('get reportRows(){'); b=s.find('get reportTotals(){',a)
+          if a<0 or b<0: raise SystemExit('getters do relatorio nao encontrados')
+          if 'get reportDetailRows(){' in s: raise SystemExit('reportDetailRows ja existe; abortando para evitar duplicacao')
+          detail="get reportDetailRows(){let rows=[];for(const s of this.reportRows){let rs=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)).sort((a,b)=>(Number(String(a.number||'').replace(/\\D/g,''))||0)-(Number(String(b.number||'').replace(/\\D/g,''))||0)),sum=0;for(const r of rs){let v=Number(r.total||0);sum+=v;rows.push({...s,reportKey:'r-'+r.id,receiptNumber:r.number||'-',paymentDate:r.paymentDate||r.date||s.paymentDate,description:r.description||s.description,reportValue:v,paymentMethod:r.paymentMethod||s.paymentMethod||''})}let u=Math.max(0,Number(s.paidValue||0)-sum);if(u>0)rows.push({...s,reportKey:'u-'+s.id,receiptNumber:'PENDENTE',paymentDate:s.paymentDate,description:s.description,reportValue:u,paymentMethod:s.paymentMethod||''});if(!rs.length&&u<=0)rows.push({...s,reportKey:'s-'+s.id,receiptNumber:'-',description:s.description,reportValue:Number(s.paidValue||s.amount||0),paymentMethod:s.paymentMethod||''})}return rows},"
+          s=s[:b]+detail+s[b:]
+          # tabela visivel
+          sec=s.find("<section x-show=\"view==='relatorios'\"")
+          t=s.find('<div class="glass rounded-3xl p-4 overflow-auto scrollbar">',sec); e=s.find('</table></div>',t)+14
+          block=s[t:e]
+          swaps=[('x-for="s in reportRows" :key="s.id"','x-for="s in reportDetailRows" :key="s.reportKey"'),('x-text="reportReceiptNumber(s)"','x-text="s.receiptNumber"'),('x-text="money(s.paidValue||0)"','x-text="money(s.reportValue||0)"')]
+          for old,new in swaps:
+            if block.count(old)!=1: raise SystemExit('tabela visivel divergente: '+old)
+            block=block.replace(old,new,1)
+          s=s[:t]+block+s[e:]
+          # contador e tabela do PDF
+          marker='x-text="reportRows.length"'
+          start=s.find('RELATÓRIO DE PRESTADORES E PAGAMENTOS')-5000
+          i=s.find(marker,start)
+          if i<0: raise SystemExit('contador do PDF nao encontrado')
+          s=s[:i]+s[i:].replace(marker,'x-text="reportDetailRows.length"',1)
+          t=s.find('<table class="report-table mb-5">'); e=s.find('</table>',t)+8; block=s[t:e]
+          swaps=[('x-for="s in reportRows" :key="s.id"','x-for="s in reportDetailRows" :key="s.reportKey"'),('x-text="reportReceiptNumber(s)"','x-text="s.receiptNumber"'),('x-text="money(s.paidValue || s.amount)"','x-text="money(s.reportValue || 0)"')]
+          for old,new in swaps:
+            if block.count(old)!=1: raise SystemExit('tabela PDF divergente: '+old)
+            block=block.replace(old,new,1)
+          s=s[:t]+block+s[e:]
+          # CSV - estrutura exata encontrada no diagnostico
+          old_head="[['Data do serviço','Data do pagamento','Prestador','Categoria','Descrição','Valor','Pago','Status','Forma']]"
+          new_head="[['Recibo nº','Data do serviço','Data do pagamento','Prestador','Categoria','Descrição','Valor do serviço','Valor deste pagamento','Status','Forma']]"
+          old_rows="this.reportRows.map(s=>[s.serviceDate,s.paymentDate||'',this.providerName(s.providerId),s.category,s.description,s.amount,s.paidValue||0,s.status,s.paymentMethod||''])"
+          new_rows="this.reportDetailRows.map(s=>[s.receiptNumber,s.serviceDate,s.paymentDate||'',this.providerName(s.providerId),s.category,s.description,s.amount,s.reportValue||0,s.status,s.paymentMethod||''])"
+          if s.count(old_head)!=1: raise SystemExit('cabecalho CSV divergente')
+          if s.count(old_rows)!=1: raise SystemExit('linhas CSV divergentes')
+          s=s.replace(old_head,new_head,1).replace(old_rows,new_rows,1)
+          p.write_text(s)
+          print('relatorio detalhado por recibo aplicado com sucesso')
+          PY
+      - name: Renovar cache
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js'); s=p.read_text()
+          old="const CACHE_NAME = 'recibocondo-v75-restore-dataclone';"
+          new="const CACHE_NAME = 'recibocondo-v76-report-multiple-receipts';"
+          if s.count(old)!=1: raise SystemExit('cache esperado nao encontrado exatamente uma vez')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Validar alteracoes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          checks=['get reportDetailRows(){','x-for="s in reportDetailRows" :key="s.reportKey"','x-text="reportDetailRows.length"',"this.reportDetailRows.map(s=>[s.receiptNumber"]
+          for c in checks:
+            if c not in s: raise SystemExit('validacao falhou: '+c)
+          print('validacoes ok')
+          PY
+      - name: Commit final limpo
+        run: |
+          rm -f .github/workflows/inspect-report-multiple-receipts.yml
+          rm -f .github/workflows/fix-report-multiple-receipts.yml
+          rm -f .github/workflows/fix-report-multiple-receipts-v2.yml
+          rm -f .github/workflows/inspect-report-markers.yml
+          rm -f .github/workflows/inspect-report-csv.yml
+          rm -f .github/workflows/finalize-report-multiple-receipts.yml
+          rm -f report-inspection.txt report-markers.txt csv-inspection.txt
+          git config user.name 'ReciboCondo Report Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Detail reports by individual receipts'
+          git push origin HEAD:fix/report-multiple-receipts
