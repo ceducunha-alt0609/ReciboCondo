@@ -1,4 +1,4 @@
-name: v101 verification
+name: v101 cleanup temporary tooling
 on:
   push:
     paths:
@@ -6,19 +6,29 @@ on:
 permissions:
   contents: write
 jobs:
-  verify:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - run: python tools/v101_verify.py
-      - name: Commit verification output
+      - name: Remove v101 temporary files only
+        run: |
+          rm -f \
+            tools/v101_atomic_harden.py \
+            tools/v101_inspect.py \
+            tools/v101_inspection.txt \
+            tools/v101_patch.py \
+            tools/v101_patch_fixer.py \
+            tools/v101_verify.py \
+            tools/v101_verification.txt \
+            .github/workflows/v101-fix-patch.yml \
+            .github/workflows/v101-inspect.yml \
+            .github/workflows/v101-patch.yml \
+            .github/workflows/v101-verify.yml
+      - name: Commit cleanup
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/v101_verification.txt
+          git add -A
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Generate temporary v101 verification output"
+          git commit -m "Remove temporary v101 audit tooling"
           git push
