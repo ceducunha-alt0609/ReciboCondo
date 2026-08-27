@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v69-payment-history-guard';
+const CACHE_NAME = 'recibocondo-v70-legacy-import-idempotent';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
