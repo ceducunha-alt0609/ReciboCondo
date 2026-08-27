@@ -1,31 +1,37 @@
-name: Auditar valor de lancamento
+name: Proteger valores de lancamento
 on:
   push:
     branches: [audit/provider-duplicates]
 permissions:
   contents: write
 jobs:
-  inspect:
+  fix:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - name: Aplicar validacoes de valor
+        run: |
           python3 - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text()
-          terms=['saveService','serviceForm.amount','amount:Number','db.services.add','Informe um valor','valor maior']
-          out=[]
-          for term in terms:
-            pos=0
-            while True:
-              i=s.find(term,pos)
-              if i<0: break
-              out.append(f'===== {term} @ {i} =====\n'+s[max(0,i-1800):i+4500])
-              pos=i+len(term)
-          Path('service-value-inspection.txt').write_text('\n\n'.join(out))
+          import re
+          p=Path('index.html'); s=p.read_text()
+          old="async saveService(){if(this.isViewer)return;let paid=Number(this.serviceForm.paidValue||0), amount=Number(this.serviceForm.amount||0);let status=paid<=0?'Pendente':(paid>=amount?'Pago':'Parcial');"
+          new="async saveService(){if(this.isViewer)return;let paid=Number(this.serviceForm.paidValue||0), amount=Number(this.serviceForm.amount||0);if(!Number.isFinite(amount)||amount<=0)return this.toast('Informe um valor de serviço maior que zero.','warning');if(!Number.isFinite(paid)||paid<0)return this.toast('Informe um valor pago válido.','warning');if(paid>amount+0.000001)return this.toast('O valor pago não pode ser maior que o valor do serviço.','warning');let status=paid<=0?'Pendente':(paid>=amount?'Pago':'Parcial');"
+          if old not in s: raise SystemExit('saveService nao encontrado no formato esperado')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          sw=Path('sw.js'); w=sw.read_text()
+          w2=re.sub(r"const CACHE_NAME = 'recibocondo-v[^']+';", "const CACHE_NAME = 'recibocondo-v92-service-value-guard';", w, count=1)
+          if w2==w: raise SystemExit('Cache nao atualizado')
+          sw.write_text(w2)
+          out=p.read_text()
+          for needle in ['Number.isFinite(amount)','amount<=0','paid>amount+0.000001']:
+            if needle not in out: raise SystemExit('Protecao ausente: '+needle)
           PY
-          git config user.name 'ReciboCondo Audit'
+      - name: Commit
+        run: |
+          git config user.name 'ReciboCondo Guard'
           git config user.email 'actions@users.noreply.github.com'
-          git add service-value-inspection.txt
-          git commit -m 'Inspect service amount validation' || exit 0
+          git add index.html sw.js
+          git commit -m 'Validate service and initial payment amounts' || exit 0
           git push
