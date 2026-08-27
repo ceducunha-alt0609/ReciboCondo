@@ -1,0 +1,34 @@
+name: Inspecionar recibo parcial
+on:
+  push:
+    branches: [fix/partial-receipt-pdf]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extrair pontos de valor do recibo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          terms=['function issueReceipt','receipt.value','r.value','service.value','svc.value','receiptValue','valorRecibo']
+          out=[]
+          for term in terms:
+              pos=0
+              while True:
+                  i=s.find(term,pos)
+                  if i<0: break
+                  out.append('\n===== '+term+' @ '+str(i)+' =====\n'+s[max(0,i-1000):i+2200])
+                  pos=i+len(term)
+          Path('receipt-inspection.txt').write_text('\n'.join(out))
+          PY
+      - name: Commit temporario da inspecao
+        run: |
+          git config user.name 'ReciboCondo Inspector'
+          git config user.email 'actions@users.noreply.github.com'
+          git add receipt-inspection.txt
+          git commit -m 'Inspect partial receipt value flow'
+          git push
