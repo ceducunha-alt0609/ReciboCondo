@@ -1,4 +1,4 @@
-name: v102 provider totals semantics
+name: v102 cleanup temporary tooling
 on:
   push:
     paths:
@@ -6,71 +6,21 @@ on:
 permissions:
   contents: write
 jobs:
-  patch:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch provider totals semantics
+      - name: Remove v102 temporary files only
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import subprocess,tempfile
-          p=Path('index.html'); s=p.read_text(encoding='utf-8')
-          def once(old,new,label):
-              global s
-              n=s.count(old)
-              if n!=1: raise SystemExit(f'{label}: expected 1 match, got {n}')
-              s=s.replace(old,new,1)
-          marker='Total movimentado'
-          if s.count(marker)!=1: raise SystemExit(f'provider panel marker: expected 1, got {s.count(marker)}')
-          mi=s.index(marker)
-          start=s.rfind('<div class="grid md:grid-cols-4 gap-3 mb-4">',0,mi)
-          end_marker='<div class="grid xl:grid-cols-3 gap-4">'
-          end=s.find(end_marker,mi)
-          if start<0 or end<0: raise SystemExit('provider panel boundaries not found')
-          old_block=s[start:end]
-          if 'providerSpend(selectedProvider?.id)' not in old_block or 'providerOpen(selectedProvider?.id)' not in old_block or 'providerReceipts(selectedProvider?.id)' not in old_block:
-              raise SystemExit('provider panel boundary validation failed')
-          new_block='''<div class="grid md:grid-cols-5 gap-3 mb-4">
-              <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Total lançado</p><b class="text-lg" x-text="money(providerSpend(selectedProvider?.id))"></b></div>
-              <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Pago</p><b class="text-lg text-emerald-700" x-text="money(providerPaid(selectedProvider?.id))"></b></div>
-              <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Em aberto</p><b class="text-lg text-red-600" x-text="money(providerOpen(selectedProvider?.id))"></b></div>
-              <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Serviços</p><b class="text-lg" x-text="providerServices(selectedProvider?.id).length"></b></div>
-              <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Recibos</p><b class="text-lg text-amber-700" x-text="providerReceipts(selectedProvider?.id).length"></b></div>
-            </div>
-
-            '''
-          s=s[:start]+new_block+s[end:]
-          once("providerLastServiceLabel(id){let s=this.providerServices(id)[0];return s?this.fmt(s.serviceDate)+' • '+this.money(s.paidValue||s.amount):'-'}", "providerLastServiceLabel(id){let s=this.providerServices(id)[0];return s?this.fmt(s.serviceDate)+' • '+this.money(s.amount||0):'-'}", 'last service value')
-          once("providerSpend(id){return this.services.filter(s=>Number(s.providerId)===Number(id)).reduce((a,s)=>a+Number(s.paidValue||s.amount||0),0)},providerOpen(id){return this.services.filter(s=>Number(s.providerId)===Number(id)).reduce((a,s)=>a+this.balance(s),0)}", "providerSpend(id){return this.services.filter(s=>Number(s.providerId)===Number(id)).reduce((a,s)=>a+Number(s.amount||0),0)},providerPaid(id){return this.payments.filter(p=>Number(p.providerId)===Number(id)).reduce((a,p)=>a+Number(p.amount||0),0)},providerOpen(id){return this.services.filter(s=>Number(s.providerId)===Number(id)).reduce((a,s)=>a+this.balance(s),0)}", 'provider totals')
-          once("amount:this.money(this.providerSpend(p.id)),date:'em aberto '+this.money(this.providerOpen(p.id)),description:'Contato: '", "amount:this.money(this.providerSpend(p.id)),date:'pago '+this.money(this.providerPaid(p.id))+' • em aberto '+this.money(this.providerOpen(p.id)),description:'Contato: '", 'provider search result')
-          once("amount:this.money(s.paidValue||s.amount),date:s.paymentDate?this.fmt(s.paymentDate):this.fmt(s.serviceDate)", "amount:this.money(s.amount||0),date:s.paymentDate?this.fmt(s.paymentDate):this.fmt(s.serviceDate)", 'service search amount')
-          p.write_text(s,encoding='utf-8')
-          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8')
-          old='recibocondo-v101-payment-ledger'; new='recibocondo-v102-provider-totals'
-          if w.count(old)!=1: raise SystemExit(f'cache marker expected once, got {w.count(old)}')
-          sw.write_text(w.replace(old,new,1),encoding='utf-8')
-          checks={
-            'hybrid provider formula removed':'providerSpend(id){return this.services.filter(s=>Number(s.providerId)===Number(id)).reduce((a,s)=>a+Number(s.paidValue||s.amount||0),0)}' not in s,
-            'provider total launched':'providerSpend(id){return this.services.filter(s=>Number(s.providerId)===Number(id)).reduce((a,s)=>a+Number(s.amount||0),0)}' in s,
-            'provider paid ledger':'providerPaid(id){return this.payments.filter(p=>Number(p.providerId)===Number(id)).reduce((a,p)=>a+Number(p.amount||0),0)}' in s,
-            'panel labels':'Total lançado' in s and 'money(providerPaid(selectedProvider?.id))' in s,
-            'search separates paid/open':"date:'pago '+this.money(this.providerPaid(p.id))+' • em aberto '" in s,
-            'service search uses launched value':"amount:this.money(s.amount||0),date:s.paymentDate?" in s,
-            'last service uses service amount':"providerLastServiceLabel(id){let s=this.providerServices(id)[0];return s?this.fmt(s.serviceDate)+' • '+this.money(s.amount||0):'-'}" in s,
-            'cache v102':'recibocondo-v102-provider-totals' in sw.read_text(encoding='utf-8')
-          }
-          startjs=s.find("const db=new Dexie('ReciboCondoPrestadoresDB');"); endjs=s.find('</script>',startjs)
-          if startjs<0 or endjs<0: raise SystemExit('app script not found')
-          with tempfile.NamedTemporaryFile('w',suffix='.js',delete=False,encoding='utf-8') as f: f.write(s[startjs:endjs]); name=f.name
-          checks['JS syntax']=subprocess.run(['node','--check',name],capture_output=True,text=True).returncode==0
-          print('\n'.join(('PASS' if v else 'FAIL')+' | '+k for k,v in checks.items()))
-          if not all(checks.values()): raise SystemExit('v102 verification failed')
-          PY
-      - name: Commit v102
+          rm -f \
+            tools/v102_inspection.txt \
+            .github/workflows/v102-inspect.yml \
+            .github/workflows/v102-patch.yml
+      - name: Commit cleanup
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html sw.js
-          git commit -m "v102: separate provider launched paid and open totals"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Remove temporary v102 audit tooling"
           git push
