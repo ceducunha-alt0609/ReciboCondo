@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v66-runtime-receipt-guard';
+const CACHE_NAME = 'recibocondo-v67-service-delete-guard';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
