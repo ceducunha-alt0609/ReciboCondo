@@ -1,0 +1,81 @@
+name: Remover importacao Excel do V2
+on:
+  push:
+    branches: [cleanup/remove-excel-import-ui]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/remove-excel-import-ui
+      - name: Remover UI e fluxo de importacao Excel
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          # Remove the settings card that contains the legacy Excel import controls.
+          key='CONTROLE_RECIBOS_2022_2023PC.xlsm'
+          i=s.find(key)
+          if i<0: raise SystemExit('Bloco Excel legado nao encontrado')
+          # The visible card is the nearest glass card wrapping this text.
+          start=s.rfind('<div class="glass rounded-3xl p-4 space-y-4">',0,i)
+          if start<0: raise SystemExit('Inicio do card Excel nao encontrado')
+          # Find next sibling glass card; remove through just before it.
+          nxt=s.find('<div class="glass rounded-3xl p-4 space-y-4">',i+len(key))
+          if nxt<0: raise SystemExit('Fim do card Excel nao encontrado')
+          removed=s[start:nxt]
+          if 'Excel' not in removed or 'importLegacyExcel' not in removed and 'openImportModal' not in removed:
+              # Buttons may only reference modal helpers; require at least clear legacy wording.
+              if 'base Excel' not in removed and 'Excel legado' not in removed:
+                  raise SystemExit('Card localizado nao parece ser o de importacao Excel')
+          s=s[:start]+s[nxt:]
+
+          # Disable/remove modal-opening helper and import function from normal V2 code.
+          # Remove openImportModal function if present by slicing from its marker to openClearAllModal.
+          a=s.find('openImportModal(replace=false)')
+          if a>=0:
+              b=s.find('openClearAllModal()',a)
+              if b<0: raise SystemExit('Fim de openImportModal nao encontrado')
+              s=s[:a]+s[b:]
+
+          # Remove importLegacyExcel function if present by slicing to clearAllInternal.
+          a=s.find('async importLegacyExcel(replace=false,skipConfirm=false)')
+          if a>=0:
+              b=s.find('async clearAllInternal()',a)
+              if b<0: raise SystemExit('Fim de importLegacyExcel nao encontrado')
+              s=s[:a]+s[b:]
+
+          # Remove confirmActionModal branches that reference legacy import, if still present.
+          s=s.replace("else if(m.type==='importAdd'){await this.importLegacyExcel(false,true)}",'')
+          s=s.replace("else if(m.type==='importReplace'){await this.importLegacyExcel(true,true)}",'')
+
+          # Validation: no visible/import callable references should remain.
+          forbidden=['importLegacyExcel(',"m.type==='importAdd'","m.type==='importReplace'",'CONTROLE_RECIBOS_2022_2023PC.xlsm']
+          left=[x for x in forbidden if x in s]
+          if left: raise SystemExit('Referencias legadas restantes: '+repr(left))
+          p.write_text(s)
+          PY
+      - name: Renovar cache
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js'); s=p.read_text()
+          import re
+          m=re.search(r"const CACHE_NAME = '([^']+)';",s)
+          if not m: raise SystemExit('CACHE_NAME nao encontrado')
+          s=s[:m.start(1)]+'recibocondo-v80-no-excel-import'+s[m.end(1):]
+          p.write_text(s)
+          PY
+      - name: Limpar workflow temporario e commit
+        run: |
+          rm -f .github/workflows/remove-excel-import-ui.yml
+          git config user.name 'ReciboCondo V2 Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git diff --cached --quiet && { echo 'Nenhuma alteracao'; exit 1; }
+          git commit -m 'Remove legacy Excel import from V2 settings'
+          git push origin HEAD:cleanup/remove-excel-import-ui
