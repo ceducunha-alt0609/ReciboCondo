@@ -1,0 +1,34 @@
+name: Proteger emissao atomica do recibo
+on:
+  push:
+    branches: [audit/provider-duplicates]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html'); s=p.read_text()
+          old="let p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{};let meta=await db.meta.get('receiptSeq'),next=Math.max(Number(meta?.value||0),this.receiptMaxNumber())+1;await db.meta.put({key:'receiptSeq',value:next});let r={number:String(next).padStart(6,'0'),date:this.today(),paymentDate:s.paymentDate||this.today(),providerId:p.id,providerName:p.name||'Prestador não informado',document:p.document||'',category:s.category,reference:s.reference,description:desc,total:pending,paymentMethod:s.paymentMethod||'Não informado',location:s.location,serviceId:s.id,manager:this.settings.manager,condoName:this.settings.condoName,condoCnpj:this.settings.cnpj||'',condoAddress:this.settings.address||''};let id=await db.receipts.add(r);r.id=id;"
+          new="let p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{},r=null;await db.transaction('rw',db.meta,db.receipts,async()=>{let meta=await db.meta.get('receiptSeq'),next=Math.max(Number(meta?.value||0),this.receiptMaxNumber())+1;r={number:String(next).padStart(6,'0'),date:this.today(),paymentDate:s.paymentDate||this.today(),providerId:p.id,providerName:p.name||'Prestador não informado',document:p.document||'',category:s.category,reference:s.reference,description:desc,total:pending,paymentMethod:s.paymentMethod||'Não informado',location:s.location,serviceId:s.id,manager:this.settings.manager,condoName:this.settings.condoName,condoCnpj:this.settings.cnpj||'',condoAddress:this.settings.address||''};await db.meta.put({key:'receiptSeq',value:next});let id=await db.receipts.add(r);r.id=id});"
+          if old not in s: raise SystemExit('Trecho de emissao nao encontrado')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          sw=Path('sw.js'); w=sw.read_text()
+          w2=re.sub(r"const CACHE_NAME = 'recibocondo-v[^']+';", "const CACHE_NAME = 'recibocondo-v94-atomic-receipt';", w, count=1)
+          if w2==w: raise SystemExit('Cache nao atualizado')
+          sw.write_text(w2)
+          out=p.read_text()
+          for needle in ["db.transaction('rw',db.meta,db.receipts", "await db.meta.put({key:'receiptSeq',value:next})", "await db.receipts.add(r)"]:
+            if needle not in out: raise SystemExit('Protecao ausente: '+needle)
+          PY
+          git config user.name 'ReciboCondo Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          git commit -m 'Make receipt numbering and creation atomic' || exit 0
+          git push
