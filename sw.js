@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v99-dashboard-selected-year-month';
+const CACHE_NAME = 'recibocondo-v100-integrity-cleanup';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
