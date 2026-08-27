@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v91-provider-duplicate-guard';
+const CACHE_NAME = 'recibocondo-v92-service-value-guard';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
