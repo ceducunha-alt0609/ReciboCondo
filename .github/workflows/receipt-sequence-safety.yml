@@ -1,0 +1,63 @@
+name: Blindar sequencia de recibos
+
+on:
+  push:
+    branches: [fix/transacoes-seguras-importacao]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/transacoes-seguras-importacao
+      - name: Preservar sequencia no backup e restauracao
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old_backup="let data={settings:this.settings,providers:this.providers,services:this.services,receipts:this.receipts,recurrences:this.recurrences,logs:this.logs,backupStats:this.backupStats(),exportedAt:now};"
+          new_backup="let seqMeta=await db.meta.get('receiptSeq');let data={settings:this.settings,providers:this.providers,services:this.services,receipts:this.receipts,recurrences:this.recurrences,logs:this.logs,receiptSeq:Number(seqMeta?.value||this.receiptMaxNumber()||0),backupStats:this.backupStats(),exportedAt:now};"
+          if s.count(old_backup)!=1:
+              raise SystemExit(f'Patch abortado: bloco backup encontrado {s.count(old_backup)} vez(es)')
+          s=s.replace(old_backup,new_backup,1)
+
+          old_tx="await db.transaction('rw',db.providers,db.services,db.receipts,db.recurrences,db.logs,db.settings,async()=>{"
+          new_tx="await db.transaction('rw',db.providers,db.services,db.receipts,db.recurrences,db.logs,db.settings,db.meta,async()=>{"
+          if s.count(old_tx)!=1:
+              raise SystemExit(f'Patch abortado: transacao restore encontrada {s.count(old_tx)} vez(es)')
+          s=s.replace(old_tx,new_tx,1)
+
+          old_tail="if(logs.length)await db.logs.bulkAdd(logs.map(l=>{let x={...l};delete x.id;return x}).slice(0,200))});await this.logAction('restore'"
+          new_tail="if(logs.length)await db.logs.bulkAdd(logs.map(l=>{let x={...l};delete x.id;return x}).slice(0,200));let restoredMax=receipts.reduce((m,r)=>Math.max(m,Number(String(r.number||'').replace(/\\D/g,'')||0)),0),safeSeq=Math.max(Number(data.receiptSeq||0),restoredMax);await db.meta.put({key:'receiptSeq',value:safeSeq})});await this.logAction('restore'"
+          if s.count(old_tail)!=1:
+              raise SystemExit(f'Patch abortado: final restore encontrado {s.count(old_tail)} vez(es)')
+          s=s.replace(old_tail,new_tail,1)
+          p.write_text(s,encoding='utf-8')
+          print('sequencia oficial agora acompanha backup e restauracao')
+          PY
+      - name: Renovar cache do PWA
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js')
+          s=p.read_text(encoding='utf-8')
+          old="const CACHE_NAME = 'recibocondo-v64-transaction-safe';"
+          new="const CACHE_NAME = 'recibocondo-v65-receipt-sequence-safe';"
+          if s.count(old)!=1:
+              raise SystemExit(f'Patch abortado: cache esperado encontrado {s.count(old)} vez(es)')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit da correcao e remover workflow temporario
+        run: |
+          rm -f .github/workflows/receipt-sequence-safety.yml
+          git config user.name "ReciboCondo Receipt Guard"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html sw.js .github/workflows/receipt-sequence-safety.yml
+          git commit -m "Preserve receipt sequence across backups and restores"
+          git push origin HEAD:fix/transacoes-seguras-importacao
