@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v70-legacy-import-idempotent';
+const CACHE_NAME = 'recibocondo-v71-clear-all-atomic';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
