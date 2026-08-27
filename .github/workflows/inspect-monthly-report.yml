@@ -1,0 +1,31 @@
+name: Auditar relatorio mensal
+on:
+  push:
+    branches: [audit/provider-duplicates]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          keys=['reportDetailRows','reportTotal','reportRows','monthly','relatorio mensal','printReport','reportValue','receiptNumber']
+          out=[]
+          for k in keys:
+            pos=0
+            while True:
+              i=s.find(k,pos)
+              if i<0: break
+              out.append('===== '+k+' @ '+str(i)+' =====\n'+s[max(0,i-1800):i+5200])
+              pos=i+len(k)
+          Path('monthly-report-inspection.txt').write_text('\n\n'.join(out))
+          PY
+          git config user.name 'ReciboCondo Audit'
+          git config user.email 'actions@users.noreply.github.com'
+          git add monthly-report-inspection.txt
+          git commit -m 'Inspect monthly report calculations' || exit 0
+          git push
