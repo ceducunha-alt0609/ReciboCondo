@@ -1,0 +1,36 @@
+name: Inspecionar sequencia e reset
+on:
+  push:
+    branches: [audit/receipt-seq-reset]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/receipt-seq-reset
+      - name: Extrair trechos relevantes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          terms=['receiptSeq','clearAllData','Apagar dados locais','async restore(','resetReceipt','manualReceipt','receiptMaxNumber']
+          out=[]
+          for term in terms:
+              pos=0
+              while True:
+                  i=s.find(term,pos)
+                  if i<0: break
+                  out.append('\n===== '+term+' @ '+str(i)+' =====\n'+s[max(0,i-1400):i+3000])
+                  pos=i+len(term)
+          Path('seq-reset-inspection.txt').write_text('\n'.join(out))
+          PY
+      - name: Commit diagnostico
+        run: |
+          git config user.name 'ReciboCondo Seq Inspector'
+          git config user.email 'actions@users.noreply.github.com'
+          git add seq-reset-inspection.txt
+          git commit -m 'Inspect receipt sequence and reset flow'
+          git push
