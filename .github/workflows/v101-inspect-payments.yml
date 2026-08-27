@@ -1,0 +1,43 @@
+name: v101 inspect payment flow
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v101-inspect-payments.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract payment-related code
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('index.html').read_text(encoding='utf-8')
+          targets=['db.version(3)','async load()','async saveService()','async savePayment()','async issueReceipt()','async removePaymentInternal','get reportDetailRows','get yearlyPaymentRows','async backup()','async restore(ev)','async clearAllInternal()']
+          out=[]
+          for target in targets:
+              pos=text.find(target)
+              out.append('\n'+'='*90+'\nTARGET: '+target+'\n'+'='*90+'\n')
+              if pos<0:
+                  out.append('NOT FOUND\n')
+                  continue
+              start=max(0,pos-700)
+              end=min(len(text),pos+6500)
+              out.append(text[start:end])
+              out.append('\n')
+          Path('v101-payment-snippets.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+      - name: Commit inspection output
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v101-payment-snippets.txt
+          git commit -m 'Add temporary v101 payment inspection output'
+          git push
