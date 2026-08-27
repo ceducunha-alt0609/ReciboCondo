@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v62-isolated';
+const CACHE_NAME = 'recibocondo-v63-settings-protected';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
