@@ -1,0 +1,60 @@
+name: Blindar restauracao e importacao
+
+on:
+  push:
+    branches: [fix/transacoes-seguras-importacao]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/transacoes-seguras-importacao
+      - name: Tornar restauracao e importacao atomicas
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          a=s.find("async restore(ev){")
+          b=s.find(",async importLegacyExcel",a)
+          c=s.find(",async clearAllInternal",b)
+          if min(a,b,c)<0:
+              raise SystemExit(f'Patch abortado: marcadores nao encontrados restore={a} import={b} clear={c}')
+          if s.count("async restore(ev){")!=1 or s.count("async importLegacyExcel")!=1:
+              raise SystemExit('Patch abortado: funcoes alvo nao sao unicas')
+
+          restore="""async restore(ev){let f=ev.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(!data||typeof data!=='object')throw new Error('Backup inválido');let providers=Array.isArray(data.providers)?data.providers:[],services=Array.isArray(data.services)?data.services:[],receipts=Array.isArray(data.receipts)?data.receipts:[],recurrences=Array.isArray(data.recurrences)?data.recurrences:[],logs=Array.isArray(data.logs)?data.logs:[];await db.transaction('rw',db.providers,db.services,db.receipts,db.recurrences,db.logs,db.settings,async()=>{await db.providers.clear();await db.services.clear();await db.receipts.clear();await db.recurrences.clear();await db.logs.clear();if(data.settings){this.settings=data.settings;await db.settings.put({key:'main',value:this.settings})}if(providers.length)await db.providers.bulkAdd(providers);if(services.length)await db.services.bulkAdd(services);if(receipts.length)await db.receipts.bulkAdd(receipts);if(recurrences.length)await db.recurrences.bulkAdd(recurrences);if(logs.length)await db.logs.bulkAdd(logs.map(l=>{let x={...l};delete x.id;return x}).slice(0,200))});await this.logAction('restore','Backup restaurado','Dados restaurados por arquivo JSON.');await this.load();this.toast('Backup restaurado com sucesso!')}catch(e){console.error(e);this.toast('Não foi possível restaurar o backup: '+e.message,'error')}}"""
+
+          imp="""async importLegacyExcel(replace=false,skipConfirm=false){if(this.isViewer)return;if(!skipConfirm){this.openImportModal(replace);return}try{let res=await fetch('./assets/data/excel_legacy_import.json');if(!res.ok)throw new Error('Arquivo de importação não encontrado');let data=await res.json();if(!data||typeof data!=='object')throw new Error('Base Excel inválida');let providerIdByKey={},serviceIdByReceipt={},existingProviders=this.providers.slice();await db.transaction('rw',db.providers,db.services,db.receipts,db.recurrences,db.meta,async()=>{if(replace){await db.providers.clear();await db.services.clear();await db.receipts.clear();await db.recurrences.clear()}for(const raw of (Array.isArray(data.providers)?data.providers:[])){let p={...raw};let legacyKey=p.legacyKey;delete p.id;delete p.legacyKey;let existing=existingProviders.find(x=>(x.document&&p.document&&x.document===p.document)||x.name===p.name);let id=existing&&!replace?existing.id:await db.providers.add(p);providerIdByKey[legacyKey]=id}for(const raw of (Array.isArray(data.services)?data.services:[])){let s={...raw};let legacyReceipt=s.legacyReceipt;delete s.id;s.providerId=providerIdByKey[s.legacyProviderKey]||s.providerId;delete s.legacyProviderKey;let id=await db.services.add(s);serviceIdByReceipt[legacyReceipt]=id}for(const raw of (Array.isArray(data.receipts)?data.receipts:[])){let r={...raw};delete r.id;r.providerId=providerIdByKey[r.legacyProviderKey]||r.providerId;r.serviceId=serviceIdByReceipt[r.number]||r.serviceId;delete r.legacyProviderKey;await db.receipts.add(r)}await db.meta.put({key:'legacyImport',value:{when:new Date().toISOString(),replace,counts:data.meta||{}}})});await this.logAction('restore',replace?'Base Excel substituída':'Base Excel adicionada',((data.meta?.providers||0)+' prestadores, '+(data.meta?.services||0)+' serviços e '+(data.meta?.receipts||0)+' recibos históricos.'));await this.load();this.toast('Importação concluída: '+(data.meta?.providers||0)+' prestadores, '+(data.meta?.services||0)+' serviços e '+(data.meta?.receipts||0)+' recibos.')}catch(e){console.error(e);this.toast('Erro na importação: '+e.message+'. Nenhum dado anterior foi perdido.','error')}}"""
+
+          s=s[:a]+restore+","+imp+s[c:]
+          p.write_text(s,encoding='utf-8')
+          print('restauracao e importacao agora usam transacoes atomicas')
+          PY
+      - name: Renovar cache do PWA
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js')
+          s=p.read_text(encoding='utf-8')
+          old="const CACHE_NAME = 'recibocondo-v63-settings-protected';"
+          new="const CACHE_NAME = 'recibocondo-v64-transaction-safe';"
+          if s.count(old)!=1:
+              raise SystemExit(f'Patch abortado: cache esperado encontrado {s.count(old)} vez(es)')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit da correcao e remover workflow temporario
+        run: |
+          rm -f .github/workflows/transaction-safety.yml
+          git config user.name "ReciboCondo Data Guard"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html sw.js .github/workflows/transaction-safety.yml
+          git commit -m "Make ReciboCondo restore and legacy import atomic"
+          git push origin HEAD:fix/transacoes-seguras-importacao
