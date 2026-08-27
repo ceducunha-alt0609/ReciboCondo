@@ -1,0 +1,53 @@
+name: Restaurar painel de backup
+on:
+  push:
+    branches: [fix/restore-backup-panel]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/restore-backup-panel
+      - name: Restaurar apenas backup e limpeza local
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          if '<h3 class="font-black text-lg">Backup</h3>' in s:
+              raise SystemExit('Painel de backup já existe; abortando para evitar duplicação.')
+          marker='''            <button class="primary">Salvar configurações</button>\n          </form>\n'''
+          if s.count(marker)!=1:
+              raise SystemExit(f'Marcador após formulário de configurações encontrado {s.count(marker)} vez(es), esperado 1.')
+          panel='''\n\n          <div class="glass rounded-3xl p-4 space-y-4">\n            <div class="flex items-start justify-between gap-3">\n              <div class="flex items-start gap-3">\n                <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-rc-800 to-rc-gold text-white grid place-items-center shadow-soft"><i data-lucide="shield-check" class="w-5 h-5"></i></div>\n                <div>\n                  <h3 class="font-black text-lg">Backup</h3>\n                  <p class="text-xs text-slate-500 dark:text-slate-400">Proteção e recuperação dos dados locais do ReciboCondo.</p>\n                </div>\n              </div>\n              <span class="badge" :class="backupHealthClass()" x-text="backupHealthLabel()"></span>\n            </div>\n\n            <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-950/35 p-4 space-y-3">\n              <div class="grid sm:grid-cols-4 gap-3 text-sm">\n                <div><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Último backup</p><p class="font-black" x-text="backupLastLabel()"></p></div>\n                <div><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Registros</p><p class="font-black" x-text="backupStats().records"></p></div>\n                <div><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Recibos</p><p class="font-black" x-text="receipts.length"></p></div>\n                <div><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Recorrências</p><p class="font-black" x-text="recurrences.length"></p></div>\n              </div>\n              <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400" x-text="backupHint()"></p>\n            </div>\n\n            <div class="grid sm:grid-cols-2 gap-3">\n              <button @click="backup" class="secondary">Backup JSON</button>\n              <label class="secondary text-center cursor-pointer">Restaurar JSON<input @change="restore" type="file" accept="application/json" class="hidden"></label>\n            </div>\n\n            <div class="rounded-2xl border border-red-500/25 bg-red-500/10 p-3 space-y-2">\n              <div class="flex items-start gap-3">\n                <i data-lucide="trash-2" class="w-5 h-5 text-red-600 mt-0.5"></i>\n                <div>\n                  <p class="text-sm font-black text-red-700 dark:text-red-300">Apagar dados operacionais</p>\n                  <p class="text-xs text-slate-500 dark:text-slate-400">Remove permanentemente prestadores, serviços, recibos, recorrências e logs salvos neste navegador. Os dados do condomínio e a sequência oficial dos recibos são preservados. Recomenda-se gerar um backup JSON antes de prosseguir.</p>\n                </div>\n              </div>\n              <button @click="openClearAllModal" class="danger w-full" :disabled="isViewer">Apagar dados locais</button>\n            </div>\n          </div>\n'''
+          s=s.replace(marker,marker+panel,1)
+          forbidden=['Importar planilha Excel legada','CONTROLE_RECIBOS_2022_2023PC.xlsm','openImportModal(','importLegacyExcel(']
+          left=[x for x in forbidden if x in s]
+          if left: raise SystemExit('Importação Excel reapareceu: '+repr(left))
+          required=['<h3 class="font-black text-lg">Backup</h3>','@click="backup"','@change="restore"','@click="openClearAllModal"']
+          miss=[x for x in required if x not in s]
+          if miss: raise SystemExit('Elementos do painel ausentes: '+repr(miss))
+          p.write_text(s)
+          PY
+      - name: Renovar cache
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('sw.js'); s=p.read_text()
+          m=re.search(r"const CACHE_NAME = '([^']+)';",s)
+          if not m: raise SystemExit('CACHE_NAME não encontrado')
+          s=s[:m.start(1)]+'recibocondo-v84-backup-panel'+s[m.end(1):]
+          p.write_text(s)
+          PY
+      - name: Limpar temporarios e commit
+        run: |
+          rm -f .github/workflows/inspect-backup-panel.yml .github/workflows/restore-backup-panel.yml backup-panel-inspection.txt
+          git config user.name 'ReciboCondo Backup Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Restore backup panel without legacy Excel import'
+          git push origin HEAD:fix/restore-backup-panel
