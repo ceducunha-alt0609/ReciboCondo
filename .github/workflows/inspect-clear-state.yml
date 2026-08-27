@@ -1,0 +1,31 @@
+name: Auditar estado apos limpeza
+on:
+  push:
+    branches: [audit/duplicate-service]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          terms=['async load()','currentReceipt','selectedProviderId','receiptServiceId','clearAllInternal']
+          out=[]
+          for term in terms:
+            pos=0
+            while True:
+              i=s.find(term,pos)
+              if i<0: break
+              out.append(f'===== {term} @ {i} =====\n'+s[max(0,i-1500):i+3500])
+              pos=i+len(term)
+          Path('clear-state-inspection.txt').write_text('\n\n'.join(out))
+          PY
+          git config user.name 'ReciboCondo Audit'
+          git config user.email 'actions@users.noreply.github.com'
+          git add clear-state-inspection.txt
+          git commit -m 'Inspect transient state after data clearing' || exit 0
+          git push
