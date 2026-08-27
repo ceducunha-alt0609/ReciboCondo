@@ -1,0 +1,1217 @@
+===== generateRecurrence( @ 2150694 =====
+dente(s) no mês</p></div>
+            </div>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between"><h4 class="font-black">Ações recomendadas</h4><span class="badge" x-text="dayCenterRows.length+' item(ns)'"></span></div>
+                <div class="space-y-2 max-h-80 overflow-auto scrollbar">
+                  <template x-for="item in dayCenterRows.slice(0,8)" :key="item.key">
+                    <div class="day-center-row">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <p class="font-black truncate" x-text="item.title"></p>
+                          <p class="text-xs text-slate-500 dark:text-slate-400" x-text="item.subtitle"></p>
+                        </div>
+                        <span class="text-xs font-black px-2 py-1 rounded-full shrink-0" :class="item.tone==='danger'?'bg-red-500/10 text-red-700':item.tone==='warning'?'bg-amber-500/10 text-amber-700':'bg-emerald-500/10 text-emerald-700'" x-text="item.badge"></span>
+                      </div>
+                      <div class="mt-2 flex items-center justify-between gap-2">
+                        <b :class="item.tone==='danger'?'text-red-600':'text-emerald-700'" x-text="item.value"></b>
+                        <div class="flex gap-2">
+                          <button x-show="item.kind==='service'" @click="pay(item.service)" class="mini" :disabled="isViewer">Pagar</button>
+                          <button x-show="item.kind==='service' && Number(item.service?.paidValue||0)>0" @click="quickReceipt(item.service)" class="mini">Recibo</button>
+                          <button x-show="item.kind==='recurrence'" @click="generateRecurrence(item.recurrence)" class="mini" :disabled="isViewer">Gerar</button>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  <p x-show="!dayCenterRows.length" class="text-sm text-slate-500 text-center py-4">Tudo em ordem para hoje.</p>
+                </div>
+              </div>
+              <div class="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <div class="flex items-start gap-3">
+                  <div class="h-10 w-10 rounded-2xl bg-emerald-600 text-white grid place-items-center shrink-0"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                  <div>
+                    <h4 class="font-black">Leitura rápida</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mt-1" x-text="dayCenterSummary"></p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">Recorrência gera lançamento. Recibo continua sendo numerado somente quando emitido após pagamento.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid xl:grid-cols-3 gap-4">
+            <div class="glass rounded-3xl p-4 xl:col-span-2">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <div><h3 class="font-black">Gasto mensal no ano</h3><p class="text-xs text-slate-500 dark:text-slate-400">Total pago por mês em <span x-text="dashboardYear"></span></p></div>
+                <span class="badge" x-text="yearlyRows.length+' lançamento(s) no ano'"></span>
+              </div>
+              <div class="chart-box"><canvas id="monthlyChart"></canvas></div>
+            </div>
+            <div class="glass rounded-3xl p-4">
+              <div class="flex items-center justify-between gap-2 mb-3"><h3 class="font-black">Pagamentos por categoria</h3><span class="badge" x-text="annualCategorySummary.length+' categorias'"></span></div>
+              <div class="chart-box chart-box-sm"><canvas id="annualCatChart"></canvas></div>
+            </div>
+          </div>
+
+          <div class="grid xl:grid-cols-3 gap-4">
+            <div class="glass rounded-3xl p-4 xl:col-span-2 overflow-auto scrollbar">
+              <div class="flex items-center justify-between mb-3"><h3 class="font-black">Histórico mensal consolidado</h3><span class="badge">Janeiro a dezembro</span></div>
+              <table class="w-full text-sm min-w-[760px]">
+                <thead class="text-left text-slate-500 dark:text-slate-400"><tr><th class="p-2">Mês</th><th class="p-2 text-right">Pagamentos</th><th class="p-2 text-right">Total pago</th><th class="p-2 text-right">Em aberto</th><th class="p-2">Principal categoria</th></tr></thead>
+                <tbody>
+                  <template x-for="m in monthlyHistory" :key="m.key">
+                    <tr class="border-t border-slate-200/60 dark:border-slate-700/60">
+                      <td class="p-2 font-black" x-text="m.label"></td>
+                      <td class="p-2 text-right" x-text="m.count"></td>
+                      <td class="p-2 text-right font-black text-emerald-700" x-text="money(m.paid)"></td>
+                      <td class="p-2 text-right font-bold" :class="m.open>0?'text-red-600':'text-slate-500'" x-text="money(m.open)"></td>
+                      <td class="p-2" x-text="m.topCategory"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <div class="glass rounded-3xl p-4">
+              <h3 class="font-black mb-3">Top prestadores do ano</h3>
+              <div class="space-y-2 max-h-[410px] overflow-auto scrollbar">
+                <template x-for="(p,idx) in annualTopProviders" :key="p.id">
+                  <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 p-3 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="h-9 w-9 rounded-2xl grid place-items-center font-black" :class="idx===0?'bg-yellow-500/15 text-yellow-700':idx===1?'bg-slate-500/15 text-slate-700':idx===2?'bg-orange-500/15 text-orange-700':'bg-rc-800/10 text-rc-800'" x-text="idx+1"></div>
+                      <div class="min-w-0"><p class="font-black truncate" x-text="p.name"></p><p class="text-xs text-slate-500" x-text="p.category+' • '+p.count+' pagamento(s)'"></p></div>
+                    </div>
+                    <div class="text-right shrink-0"><p class="font-black text-emerald-600" x-text="money(p.total)"></p><p class="text-xs text-red-600" x-show="p.open>0" x-text="'Aberto: '+money(p.open)"></p></div>
+                  </div>
+                </template>
+                <p x-show="!annualTopProviders.length" class="text-sm text-slate-500">Sem movimentação no ano selecionado.</p>
+              </div>
+            </div>
+      
+
+===== generateRecurrence( @ 2184092 =====
+-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.description"></p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button @click="generateRecurrence(r)" class="mini" :disabled="isViewer || recurrenceGenerated(r)">Gerar lançamento</button>
+                    <button @click="editRecurrence(r)" class="mini" :disabled="isViewer">Editar</button>
+                    <button @click="toggleRecurrence(r)" class="mini" :disabled="isViewer" x-text="r.active?'Inativar':'Ativar'"></button>
+                    <button @click="openDeleteRecurrenceModal(r)" class="danger" :disabled="isViewer">Excluir</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p x-show="!recurrences.length" class="text-sm text-slate-500 text-center py-3">Nenhuma recorrência cadastrada ainda.</p>
+          </div>
+          <div class="glass rounded-3xl p-4 overflow-hidden"><div class="flex flex-col gap-3 mb-3"><div class="flex items-center justify-between gap-2"><h3 class="font-black text-lg">Serviços e gratificações</h3><span class="badge" x-text="filteredServices.length+' visíveis'"></span></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"><select x-model="serviceFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select><select x-model="serviceCategoryFilter" class="input"><option value="todas">Todas as categorias</option><template x-for="c in categories"><option x-text="c"></option></template></select><select x-model="serviceProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select><input x-model="serviceMonthFilter" type="month" class="input" title="Filtrar por referência"></div><button @click="clearServiceFilters" class="secondary w-full sm:w-auto sm:self-end">Limpar filtros</button></div><div class="overflow-auto scrollbar"><table class="w-full text-sm"><thead class="text-left text-slate-500"><tr><th class="p-2">Prestador</th><th class="p-2">Serviço</th><th class="p-2">Valor</th><th class="p-2">Status</th><th class="p-2">Ações</th></tr></thead><tbody><template x-for="s in filteredServices" :key="s.id"><tr class="border-t border-slate-200/60 dark:border-slate-700/60"><td class="p-2"><b x-text="providerName(s.providerId)"></b><br><span class="text-xs text-slate-500" x-text="month(s.reference)+' • '+fmt(s.serviceDate)"></span></td><td class="p-2"><span class="badge" x-text="s.category"></span><br><span class="text-xs" x-text="s.description"></span></td><td class="p-2"><b x-text="money(s.amount)"></b><br><span class="text-xs text-slate-500" x-text="'Pago: '+money(s.paidValue||0)"></span><br><span class="text-xs text-slate-500" x-show="s.paymentDate" x-text="fmt(s.paymentDate)+' • '+(s.paymentMethod||'forma não informada')"></span></td><td class="p-2"><span class="badge" :class="statusClass(s.status)" x-text="s.status"></span><br><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="overdueLabel(s)"></span></td><td class="p-2 min-w-[150px]"><select class="input py-2 text-xs font-black" @change="serviceAction($event.target.value,s); $event.target.value=''"><option value="">Ações</option><option value="pagar" :disabled="isViewer">Pagar</option><option value="recibo" :disabled="isViewer || Number(s.paidValue||0)<=0" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></option><option value="duplicar" :disabled="isViewer">Duplicar</option><option value="excluir" :disabled="isViewer">Excluir</option></select></td></tr></template></tbody></table></div></div>
+        </section>
+
+
+        <section x-show="view==='pagamentos'" class="space-y-4">
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.22em] text-rc-gold font-black">Central financeira</p>
+                <h3 class="font-black text-xl">Pagamentos</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Esta guia puxa os lançamentos de Serviços. O pagamento continua sendo registrado pela janela flutuante, sem duplicar dados.</p>
+              </div>
+              <div class="grid sm:grid-cols-3 gap-2 lg:min-w-[620px]">
+                <input x-model="paymentMonthFilter" type="month" class="input">
+                <select x-model="paymentStatusFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select>
+                <select x-model="paymentProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-2 xl:grid-cols-6 gap-3">
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-950/30 p-3
+
+===== generateRecurrence( @ 2208007 =====
+p>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <p class="font-black" x-text="item.amount"></p>
+                    <p class="text-xs text-slate-500" x-text="item.date"></p>
+                  </div>
+                </div>
+                <p class="text-sm mt-3 leading-relaxed" x-text="item.description"></p>
+                <div class="flex flex-wrap gap-2 mt-4">
+                  <button x-show="item.kind==='provider'" @click="openSearchProvider(item.data)" class="mini">Painel</button>
+                  <button x-show="item.kind==='provider'" @click="fillServiceFromProvider(item.data)" class="mini" :disabled="isViewer">Lançar</button>
+                  <button x-show="item.kind==='provider'" @click="openWhatsapp(item.data)" class="mini">WhatsApp</button>
+
+                  <button x-show="item.kind==='service'" @click="openSearchService(item.data)" class="mini">Ver serviço</button>
+                  <button x-show="item.kind==='service'" @click="pay(item.data)" class="mini" :disabled="isViewer">Pagar</button>
+                  <button x-show="item.kind==='service' && Number(item.data?.paidValue||0)>0" @click="quickReceipt(item.data)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(item.data)==='-'?'Emitir recibo':'Ver recibo'"></button>
+
+                  <button x-show="item.kind==='receipt'" @click="openSearchReceipt(item.data)" class="mini">Abrir recibo</button>
+                  <button x-show="item.kind==='receipt'" @click="currentReceipt=item.data; printReceipt()" class="mini">Imprimir</button>
+
+                  <button x-show="item.kind==='recurrence'" @click="openSearchRecurrence(item.data)" class="mini">Ver recorrência</button>
+                  <button x-show="item.kind==='recurrence'" @click="generateRecurrence(item.data)" class="mini" :disabled="isViewer">Gerar mês</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div x-show="q && !searchResults.length" class="glass rounded-3xl p-5 text-center text-slate-500">
+            Nenhum resultado encontrado para a busca atual.
+          </div>
+          <div x-show="!q" class="glass rounded-3xl p-5 text-center text-slate-500">
+            Digite no campo de busca para localizar informações do app.
+          </div>
+        </section>
+
+        <section x-show="view==='config'" class="space-y-4">
+          <form @submit.prevent="saveSettings" class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex items-start gap-3">
+              <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-rc-800 to-rc-500 text-white grid place-items-center shadow-soft"><i data-lucide="building-2" class="w-5 h-5"></i></div>
+              <div>
+                <h3 class="font-black text-lg">Dados do condomínio</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Identidade usada nos recibos, relatórios e PDFs de prestação de contas.</p>
+              </div>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-3">
+              <label><span class="text-sm font-bold">Nome</span><input x-model="settings.condoName" class="input mt-1"></label>
+              <label><span class="text-sm font-bold">Responsável</span><input x-model="settings.manager" class="input mt-1"></label>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-3">
+              <label><span class="text-sm font-bold">CNPJ</span><input x-model="settings.cnpj" class="input mt-1"></label>
+              <label><span class="text-sm font-bold">Logo</span><input @change="readLogo" type="file" accept="image/*" class="input mt-1"></label>
+            </div>
+            <label><span class="text-sm font-bold">Endereço</span><input x-model="settings.address" class="input mt-1"></label>
+            <button class="primary">Salvar configurações</button>
+          </form>
+
+
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-3">
+                <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-rc-800 to-rc-gold text-white grid place-items-center shadow-soft"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                <div>
+                  <h3 class="font-black text-lg">Backup</h3>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Proteção e recuperação dos dados locais do ReciboCondo.</p>
+                </div>
+              </div>
+              <span class="badge" :class="backupHealthClass()" x-text="backupHealthLabel()"></span>
+            </div>
+
+            <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/70 dark:bg-slate-950/35 p-4 space-y-3">
+              <div class="grid sm:grid-cols-4 gap-3 text-sm">
+                <div><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Último backup</p><p class="font-black" x-text="backupLastLabel()"></p></div>
+                <div><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Registros</p><p class="font-black" x-text="backupStats().records"></p></div>
+                <div><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Recibos</p><p class="font-black" x-text="receipts.length"></p></div>
+                <div><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Recorrências</p><p class="font-black" x-text="recurrences.length"></p></div>
+              </div>
+              <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400" x-text="backupHint()"></p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-3">
+              <button @click="backup" class="secondary">Backup JSON</button>
+              <label class="secondary text-center cursor-pointer">Restaurar JSON<input @change="restore" type="file" accept="application/json" class="hidden"></label>
+            </div>
+
+            <div class="rounded-2xl border border-red-500/25 bg-red-500/10 p-3 space-y-2">
+              <div class="flex items-start gap-3">
+                <i data-lucide="trash-2" class="w-5 h-5 text-red-600 mt-0.5"></i>
+                <div>
+                  <p class="text-sm font-black text-red-700 dark:text-red-300">Apagar dados operacionais</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Remove permanentemente prestadores, serviços, recibos, recorrências e logs salvos neste navegador. Os dados do condomínio e a sequência oficial dos recibos são preservados. Recomenda-se gerar um backup JSON antes de prosseguir.</p>
+                </div>
+              </div>
+              <button @click="openClearAllModal" class="danger w-full" :disabled="isViewer">Apagar dados loc
+
+===== generateRecurrence( @ 6482221 =====
+ber(id)),linkedRecurrences=(this.recurrences||[]).some(r=>Number(r.providerId)===Number(id));if(linkedServices||linkedReceipts||linkedRecurrences){return this.toast('Este prestador possui histórico ou recorrência vinculada e não pode ser excluído. Mantenha o cadastro para preservar a rastreabilidade.','warning')}await db.providers.delete(id);await this.logAction('delete','Prestador excluído',p.name||('ID '+id));await this.load()},
+  resetRecurrence(){this.recurrenceForm={id:null,providerId:'',category:'Jardineiro',amount:0,dueDay:5,paymentDay:5,paymentMethod:'PIX',location:'',description:'',active:true}},editRecurrence(r){this.recurrenceForm={...r};this.view='servicos';this.after()},async saveRecurrence(){if(this.isViewer)return;let d={...this.recurrenceForm,providerId:Number(this.recurrenceForm.providerId),amount:Number(this.recurrenceForm.amount||0),dueDay:Number(this.recurrenceForm.dueDay||1),paymentDay:Number(this.recurrenceForm.paymentDay||this.recurrenceForm.dueDay||1),active:!!this.recurrenceForm.active};if(d.id){await db.recurrences.update(d.id,d);await this.logAction('recurrence','Recorrência atualizada',this.providerName(d.providerId)+' • '+this.money(d.amount||0))}else{delete d.id;await db.recurrences.add(d);await this.logAction('recurrence','Recorrência criada',this.providerName(d.providerId)+' • '+this.money(d.amount||0))}this.resetRecurrence();await this.load();this.toast('Recorrência salva. Lançamentos gerados mensalmente.')},recurrenceGenerated(r,ref=this.today().slice(0,7)){return this.services.some(s=>Number(s.recurrenceId)===Number(r.id)&&s.reference===ref)},dateForDay(ref,day){let [y,m]=String(ref).split('-').map(Number);let last=new Date(y,m,0).getDate();let d=String(Math.min(Math.max(Number(day||1),1),last)).padStart(2,'0');return ref+'-'+d},async generateRecurrence(r,ref=this.today().slice(0,7)){if(this.isViewer)return;if(!r.active)return this.toast('Esta recorrência está inativa.','warning');if(this.recurrenceGenerated(r,ref))return this.toast('Lançamento já gerado para '+this.month(ref)+'.','warning');let d={providerId:Number(r.providerId),category:r.category,reference:ref,serviceDate:this.dateForDay(ref,r.paymentDay||r.dueDay),dueDate:this.dateForDay(ref,r.dueDay),amount:Number(r.amount||0),location:r.location||'',description:r.description||'Serviço recorrente mensal',status:'Pendente',paidValue:0,paymentDate:'',paymentMethod:r.paymentMethod||'',recurrenceId:r.id};await db.services.add(d);await this.logAction('recurrence','Lançamento recorrente gerado',this.providerName(r.providerId)+' • '+this.month(ref)+' • '+this.money(r.amount||0));await this.load();this.toast('Lançamento de '+this.month(ref)+' gerado.')},async generateAllRecurrencesForMonth(){if(this.isViewer)return;let active=this.recurrences.filter(r=>r.active);if(!active.length)return alert('Nenhuma recorrência ativa.');let count=0;for(const r of active){if(!this.recurrenceGenerated(r)){let d={providerId:Number(r.providerId),category:r.category,reference:this.today().slice(0,7),serviceDate:this.dateForDay(this.today().slice(0,7),r.paymentDay||r.dueDay),dueDate:this.dateForDay(this.today().slice(0,7),r.dueDay),amount:Number(r.amount||0),location:r.location||'',description:r.description||'Serviço recorrente mensal',status:'Pendente',paidValue:0,paymentDate:'',paymentMethod:r.paymentMethod||'',recurrenceId:r.id};await db.services.add(d);await this.logAction('recurrence','Lançamento recorrente gerado',this.providerName(r.providerId)+' • '+this.month(this.today().slice(0,7))+' • '+this.money(r.amount||0));count++}}await this.load();this.toast(count+' lançamento(s) gerado(s) para '+this.month(this.today().slice(0,7))+'.')},async toggleRecurrence(r){if(this.isViewer)return;await db.recurrences.update(r.id,{active:!r.active});await this.load()},openDeleteRecurrenceModal(r){if(this.isViewer)return;this.actionModal={open:true,type:'deleteRecurrence',tone:'danger',icon:'repeat-2',target:r,service:null,title:'Excluir recorrência',subtitle:'Remove apenas a regra recorrente quando ainda não há histórico gerado.',note:'Se esta recorrência já gerou lançamentos, ela deverá ser inativada em vez de excluída, preservando a origem do histórico.',confirmLabel:'Excluir recorrência',details:[{label:'Prestador',value:this.providerName(r.providerId)},{label:'Categoria',value:r.category||'-'},{label:'Valor padrão',value:this.money(r.amount||0)}]};this.after()},async removeRecurrenceInternal(id){let r=this.recurrences.find(x=>Number(x.id)===Number(id));if(!r)return;let linked=this.services.some(s=>Number(s.recurrenceId)===Number(id));if(linked){if(r.active)await db.recurrences.update(id,{active:false});await this.logAction('recurrence','Recorrência preservada como inativa',this.providerName(r.providerId)+' • '+this.money(r.amount||0));await this.load();return this.toast('Esta recorrência já possui lançamentos gerados e foi mantida como inativa para preservar o histórico.','warning')}await db.recurrences.delete(id);await this.logAction('delete','Recorrência excluída',this.providerName(r.providerId)+' • '+this.money(r.amount||0));await this.load()},async saveService(){if(this.isViewer)return;let paid=Number(this.serviceForm.paidValue||0), amount=Number(this.serviceForm.amount||0);if(!Number.isFinite(amount)||amount<=0)return this.toast('Informe um valor de serviço maior que zero.','warning');if(!Number.isFinite(paid)||paid<0)return this.toast('Informe um valor pago válido.','warning');if(paid>amount+0.000001)return this.toast('O valor pago não pode ser maior que o valor do serviço.','warning');let status=paid<=0?'Pendente':(paid>=amount?'Pago':'Parcial');let d={...this.serviceForm,providerId:Number(this.serviceForm.providerId),amount,paidValue:paid,status,paymentDate:paid>0?(this.serviceForm.paymentDate||this.today()):'',paymentMethod:paid>0?(this.serviceForm.paymentMethod||'Não informado'):''};await db.services.add(d);await this.logAction('service','Lançamento salvo',this.providerName(d.providerId)+' • '+d.category+' • '+this.money(d.amount||0));this.serviceForm={...this.serviceForm,amount:0,location:'',description:'',paymentDate:'',paymentMethod:'',paidValue:0};await this.load();this.toast('Lançamento salvo')},clearServiceFilters(){this.serviceFilter='todos';this.serviceCategoryFilter='todas';this.serviceProviderFilter='todos';this.serviceMonthFilter=''},clearReceiptFilters(){this.receiptFilter={q:'',month:'',category:'todas'}},fillServiceFromProvider(p){this.serviceForm.providerId=p.id;this.serviceForm.category=p.category||this.serviceForm.category;this.view='servicos';this.after()},openDuplicateModal(s){if(this.isViewer)return;this.actionModal={open:true,type:'duplicate',tone:'default',icon:'copy-plus',target:s,service:s,title:'Duplicar lançamento',subtitle:'Criar uma nova cópia para a referência atual.',note:'O n
+
+===== generateAllRecurrencesForMonth @ 2147423 =====
+ <p class="text-xs text-slate-500 dark:text-slate-400" x-text="card.hint"></p>
+                <div x-show="activeTooltip===card.label" x-transition.opacity.duration.120ms
+                     class="dashboard-card-tooltip">
+                  <div class="tooltip-head">
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <p class="text-[10px] font-black uppercase tracking-[.18em] opacity-75" x-text="card.tooltipTitle"></p>
+                        <p class="mt-1 text-base font-black leading-tight" x-text="card.tooltipMain"></p>
+                      </div>
+                      <i :data-lucide="card.icon" class="h-5 w-5 opacity-90 shrink-0"></i>
+                    </div>
+                  </div>
+                  <div class="tooltip-body clean">
+                    <template x-for="line in card.tooltip" :key="line">
+                      <div class="tooltip-row text-slate-700 dark:text-slate-100"><span class="tooltip-dot"></span><span x-text="line"></span></div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <div class="glass rounded-3xl p-4 md:p-5 space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.22em] text-rc-gold font-black">Central do Dia</p>
+                <h3 class="text-xl font-black">Pendências, vencimentos e recorrências</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Leitura operacional para saber o que precisa de ação agora.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="secondary" :disabled="isViewer">Gerar recorrências do mês</button>
+                <button @click="view='servicos';after()" class="primary">Abrir serviços</button>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+              <div class="day-center-card p-3"><p class="text-xs font-black uppercase tracking-[.16em] text-red-600">Vencidos</p><p class="text-2xl font-black mt-1" x-text="dayOverdue.length"></p><p class="text-xs text-slate-500" x-text="money(dayOverdue.reduce((a,s)=>a+balance(s),0))"></p></div>
+              <div class="day-center-card p-3"><p class="text-xs font-black uppercase tracking-[.16em] text-amber-600">Vencem hoje</p><p class="text-2xl font-black mt-1" x-text="dayDueToday.length"></p><p class="text-xs text-slate-500" x-text="money(dayDueToday.reduce((a,s)=>a+balance(s),0))"></p></div>
+              <div class="day-center-card p-3"><p class="text-xs font-black uppercase tracking-[.16em] text-blue-600">Próximos 7 dias</p><p class="text-2xl font-black mt-1" x-text="dayNextDue.length"></p><p class="text-xs text-slate-500" x-text="money(dayNextDue.reduce((a,s)=>a+balance(s),0))"></p></div>
+              <div class="day-center-card p-3"><p class="text-xs font-black uppercase tracking-[.16em] text-emerald-700">Recorrências</p><p class="text-2xl font-black mt-1" x-text="dayPendingRecurrences.length"></p><p class="text-xs text-slate-500">pendente(s) no mês</p></div>
+            </div>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between"><h4 class="font-black">Ações recomendadas</h4><span class="badge" x-text="dayCenterRows.length+' item(ns)'"></span></div>
+                <div class="space-y-2 max-h-80 overflow-auto scrollbar">
+                  <template x-for="item in dayCenterRows.slice(0,8)" :key="item.key">
+                    <div class="day-center-row">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <p class="font-black truncate" x-text="item.title"></p>
+                          <p class="text-xs text-slate-500 dark:text-slate-400" x-text="item.subtitle"></p>
+                        </div>
+                        <span class="text-xs font-black px-2 py-1 rounded-full shrink-0" :class="item.tone==='danger'?'bg-red-500/10 text-red-700':item.tone==='warning'?'bg-amber-500/10 text-amber-700':'bg-emerald-500/10 text-emerald-700'" x-text="item.badge"></span>
+                      </div>
+                      <div class="mt-2 flex items-center justify-between gap-2">
+                        <b :class="item.tone==='danger'?'text-red-600':'text-emerald-700'" x-text="item.value"></b>
+                        <div class="flex gap-2">
+                          <button x-show="item.kind==='service'" @click="pay(item.service)" class="mini" :disabled="isViewer">Pagar</button>
+                          <button x-show="item.kind==='service' && Number(item.service?.paidValue||0)>0" @click="quickReceipt(item.service)" class="mini">Recibo</button>
+                          <button x-show="item.kind==='recurrence'" @click="generateRecurrence(item.recurrence)" class="mini" :disabled="isViewer">Gerar</button>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  <p x-show="!dayCenterRows.length" class="text-sm text-slate-500 text-center py-4">Tudo em ordem para hoje.</p>
+                </div>
+              </div>
+              <div class="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <div class="flex items-start gap-3">
+                  <div class="h-10 w-10 rounded-2xl bg-emerald-600 text-white grid place-items-center shrink-0"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                  <div>
+                    <h4 class="font-black">Leitura rápida</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mt-1" x-text="dayCenterSummary"></p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">Recorrência gera lançamento. Recibo continua sendo numerado somente quando emitido após pagamento.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid xl:grid-cols-3 gap-4">
+            <div class="glass rounded-3xl p-4 xl:col-span-2">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <div><h3 class="font-black">Gasto mensal no ano</h3><p class="text-xs text-slate-500 dark:text-slate-400">Total pago por mês em <span x-text="dashboardYear"></span></p></div>
+                <span class="badge" x-text="yearlyRows.length+' lançamento(s) no ano'"></span>
+              </div>
+              <div class="chart-box"
+
+===== generateAllRecurrencesForMonth @ 2171301 =====
+ion($event.target.value,p); $event.target.value=''">
+                          <option value="">Ações</option>
+                          <option value="painel">Abrir painel</option>
+                          <option value="editar">Editar cadastro</option>
+                          <option value="lancar" :disabled="isViewer">Lançar serviço</option>
+                          <option value="whatsapp">WhatsApp</option>
+                          <option value="excluir" :disabled="isViewer">Excluir</option>
+                        </select>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr x-show="!filteredProviders.length"><td colspan="5" class="p-6 text-center text-slate-500">Nenhum prestador encontrado.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        
+<section x-show="view==='servicos'" class="space-y-4">
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.22em] text-rc-gold font-black">Visão mensal</p>
+                <h3 class="font-black text-xl">Painel operacional de serviços</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Acompanhe o mês selecionado antes de emitir recibos e fechar a prestação de contas.</p>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input x-model="servicePanelMonth" type="month" class="input min-w-[170px]">
+                <button @click="serviceMonthFilter=servicePanelMonth; serviceFilter='todos'" class="secondary">Ver lista do mês</button>
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar recorrências</button>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-2 xl:grid-cols-5 gap-3">
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Lançado</p><p class="text-xl font-black text-rc-800 dark:text-white" x-text="money(servicePanelTotals.expected)"></p><p class="text-xs text-slate-500" x-text="servicePanelRows.length+' lançamento(s)'"></p></div>
+              <div class="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-emerald-700 font-black">Pago</p><p class="text-xl font-black text-emerald-700" x-text="money(servicePanelTotals.paid)"></p><p class="text-xs text-emerald-700/80" x-text="servicePanelPaidRows.length+' pagamento(s)'"></p></div>
+              <div class="rounded-3xl border border-red-500/20 bg-red-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-red-700 font-black">Em aberto</p><p class="text-xl font-black text-red-700" x-text="money(servicePanelTotals.open)"></p><p class="text-xs text-red-700/80" x-text="servicePanelOpenRows.length+' pendência(s)'"></p></div>
+              <div class="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-amber-700 font-black">Recorrências</p><p class="text-xl font-black text-amber-700" x-text="servicePanelRecurringGenerated.length+'/'+recurrences.filter(r=>r.active).length"></p><p class="text-xs text-amber-700/80">geradas no mês</p></div>
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Recibos</p><p class="text-xl font-black text-rc-gold" x-text="servicePanelReceiptCount"></p><p class="text-xs text-slate-500">emitidos no mês</p></div>
+            </div>
+            <div class="grid xl:grid-cols-3 gap-3">
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 xl:col-span-2">
+                <div class="flex items-center justify-between gap-2 mb-2"><h4 class="font-black">Últimos pagamentos do mês</h4><span class="badge" x-text="month(servicePanelMonth)"></span></div>
+                <div class="space-y-2">
+                  <template x-for="s in servicePanelPaidRows.slice(0,5)" :key="s.id">
+                    <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
+                      <div><p class="font-black text-sm" x-text="providerName(s.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(s.paymentDate)+' • '+s.category+' • '+(s.paymentMethod||'forma não informada')"></p></div>
+                      <div class="text-right"><p class="font-black text-emerald-700" x-text="money(s.paidValue||0)"></p><button @click="quickReceipt(s)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></button></div>
+                    </div>
+                  </template>
+                  <p x-show="!servicePanelPaidRows.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>
+                </div>
+              </div>
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3">
+                <h4 class="font-black mb-2">Pendências e recorrências</h4>
+                <div class="space-y-2">
+                  <template x-for="s in servicePanelOpenRows.slice(0,4)" :key="'open-'+s.id">
+                    <div class="rounded-2xl border border-red-500/15 bg-red-500/5 p-2"><p class="font-black text-sm" x-text="providerName(s.providerId)"></p><p class="text-xs text-red-700" x-text="money(balance(s))+' • '+overdueLabel(s)"></p></div>
+                  </template>
+                  <template x-for="r in servicePanelPendingRecurrences.slice(0,3)" :key="'rec-'+r.id">
+                    <div class="rounded-2xl border border-amber-500/20 bg-amber-500/8 p-2"><p class="font-black text-sm" x-text="providerName(r.providerId)"></p><p class="text-xs text-amber-700" x-text="'Recorrência pendente • '+money(r.amount)"></p></div>
+                  </template>
+                  <p x-show="!servicePanelOpenRows.length && !servicePanelPendingRecurrences.length" class="text-sm text-slate-500 text-center py-3">Mês sem pendências operacionais.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <form @submit.prevent="saveService" class="glass rounded-3xl p-4 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><div><h3 class="font-bl
+
+===== generateAllRecurrencesForMonth @ 2180158 =====
+ já foi pago. Esses campos sairão no recibo oficial.</p></div></div>
+              <div class="grid sm:grid-cols-3 gap-3">
+                <label><span class="text-sm font-bold">Data do pagamento</span><input x-model="serviceForm.paymentDate" type="date" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma de pagamento</span><select x-model="serviceForm.paymentMethod" class="input mt-1"><option value="">Não informado</option><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Valor pago</span><input x-model.number="serviceForm.paidValue" type="number" step="0.01" class="input mt-1" placeholder="0,00"></label>
+              </div>
+            </div>
+            <label><span class="text-sm font-bold">Descrição detalhada</span><textarea x-model="serviceForm.description" required class="input mt-1 min-h-[90px]"></textarea></label>
+            <button class="primary w-full" :disabled="isViewer">Salvar lançamento</button>
+          </form>
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-rc-600 dark:text-rc-300 font-black">Automação segura</p>
+                <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.description"></p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button @click="generateRecurrence(r)" class="mini" :disabled="isViewer || recurrenceGenerated(r)">Gerar lançamento</button>
+                    <button @click="editRecurrence(r)" class="mini" :disabled="isViewer">Editar</button>
+                    <button @click="toggleRecurrence(r)" class="mini" :disabled="isViewer" x-text="r.active?'Inativar':'Ativar'"></button>
+                    <button @click="openDeleteRecurrenceModal(r)" class="danger" :disabled="isViewer">Excluir</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p x-show="!recurrences.length" class="text-sm text-slate-500 text-center py-3">Nenhuma recorrência cadastrada ainda.</p>
+          </div>
+          <div class="glass rounded-3xl p-4 overflow-hidden"><div class="flex flex-col gap-3 mb-3"><div class="flex items-center justify-between gap-2"><h3 class="font-black text-lg">Serviços e gratificações</h3><span class="badge" x-text="filteredServices.length+' visíveis'"></span></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"><selec
+
+===== generateAllRecurrencesForMonth @ 6483110 =====
+enceForm.dueDay||1),paymentDay:Number(this.recurrenceForm.paymentDay||this.recurrenceForm.dueDay||1),active:!!this.recurrenceForm.active};if(d.id){await db.recurrences.update(d.id,d);await this.logAction('recurrence','Recorrência atualizada',this.providerName(d.providerId)+' • '+this.money(d.amount||0))}else{delete d.id;await db.recurrences.add(d);await this.logAction('recurrence','Recorrência criada',this.providerName(d.providerId)+' • '+this.money(d.amount||0))}this.resetRecurrence();await this.load();this.toast('Recorrência salva. Lançamentos gerados mensalmente.')},recurrenceGenerated(r,ref=this.today().slice(0,7)){return this.services.some(s=>Number(s.recurrenceId)===Number(r.id)&&s.reference===ref)},dateForDay(ref,day){let [y,m]=String(ref).split('-').map(Number);let last=new Date(y,m,0).getDate();let d=String(Math.min(Math.max(Number(day||1),1),last)).padStart(2,'0');return ref+'-'+d},async generateRecurrence(r,ref=this.today().slice(0,7)){if(this.isViewer)return;if(!r.active)return this.toast('Esta recorrência está inativa.','warning');if(this.recurrenceGenerated(r,ref))return this.toast('Lançamento já gerado para '+this.month(ref)+'.','warning');let d={providerId:Number(r.providerId),category:r.category,reference:ref,serviceDate:this.dateForDay(ref,r.paymentDay||r.dueDay),dueDate:this.dateForDay(ref,r.dueDay),amount:Number(r.amount||0),location:r.location||'',description:r.description||'Serviço recorrente mensal',status:'Pendente',paidValue:0,paymentDate:'',paymentMethod:r.paymentMethod||'',recurrenceId:r.id};await db.services.add(d);await this.logAction('recurrence','Lançamento recorrente gerado',this.providerName(r.providerId)+' • '+this.month(ref)+' • '+this.money(r.amount||0));await this.load();this.toast('Lançamento de '+this.month(ref)+' gerado.')},async generateAllRecurrencesForMonth(){if(this.isViewer)return;let active=this.recurrences.filter(r=>r.active);if(!active.length)return alert('Nenhuma recorrência ativa.');let count=0;for(const r of active){if(!this.recurrenceGenerated(r)){let d={providerId:Number(r.providerId),category:r.category,reference:this.today().slice(0,7),serviceDate:this.dateForDay(this.today().slice(0,7),r.paymentDay||r.dueDay),dueDate:this.dateForDay(this.today().slice(0,7),r.dueDay),amount:Number(r.amount||0),location:r.location||'',description:r.description||'Serviço recorrente mensal',status:'Pendente',paidValue:0,paymentDate:'',paymentMethod:r.paymentMethod||'',recurrenceId:r.id};await db.services.add(d);await this.logAction('recurrence','Lançamento recorrente gerado',this.providerName(r.providerId)+' • '+this.month(this.today().slice(0,7))+' • '+this.money(r.amount||0));count++}}await this.load();this.toast(count+' lançamento(s) gerado(s) para '+this.month(this.today().slice(0,7))+'.')},async toggleRecurrence(r){if(this.isViewer)return;await db.recurrences.update(r.id,{active:!r.active});await this.load()},openDeleteRecurrenceModal(r){if(this.isViewer)return;this.actionModal={open:true,type:'deleteRecurrence',tone:'danger',icon:'repeat-2',target:r,service:null,title:'Excluir recorrência',subtitle:'Remove apenas a regra recorrente quando ainda não há histórico gerado.',note:'Se esta recorrência já gerou lançamentos, ela deverá ser inativada em vez de excluída, preservando a origem do histórico.',confirmLabel:'Excluir recorrência',details:[{label:'Prestador',value:this.providerName(r.providerId)},{label:'Categoria',value:r.category||'-'},{label:'Valor padrão',value:this.money(r.amount||0)}]};this.after()},async removeRecurrenceInternal(id){let r=this.recurrences.find(x=>Number(x.id)===Number(id));if(!r)return;let linked=this.services.some(s=>Number(s.recurrenceId)===Number(id));if(linked){if(r.active)await db.recurrences.update(id,{active:false});await this.logAction('recurrence','Recorrência preservada como inativa',this.providerName(r.providerId)+' • '+this.money(r.amount||0));await this.load();return this.toast('Esta recorrência já possui lançamentos gerados e foi mantida como inativa para preservar o histórico.','warning')}await db.recurrences.delete(id);await this.logAction('delete','Recorrência excluída',this.providerName(r.providerId)+' • '+this.money(r.amount||0));await this.load()},async saveService(){if(this.isViewer)return;let paid=Number(this.serviceForm.paidValue||0), amount=Number(this.serviceForm.amount||0);if(!Number.isFinite(amount)||amount<=0)return this.toast('Informe um valor de serviço maior que zero.','warning');if(!Number.isFinite(paid)||paid<0)return this.toast('Informe um valor pago válido.','warning');if(paid>amount+0.000001)return this.toast('O valor pago não pode ser maior que o valor do serviço.','warning');let status=paid<=0?'Pendente':(paid>=amount?'Pago':'Parcial');let d={...this.serviceForm,providerId:Number(this.serviceForm.providerId),amount,paidValue:paid,status,paymentDate:paid>0?(this.serviceForm.paymentDate||this.today()):'',paymentMethod:paid>0?(this.serviceForm.paymentMethod||'Não informado'):''};await db.services.add(d);await this.logAction('service','Lançamento salvo',this.providerName(d.providerId)+' • '+d.category+' • '+this.money(d.amount||0));this.serviceForm={...this.serviceForm,amount:0,location:'',description:'',paymentDate:'',paymentMethod:'',paidValue:0};await this.load();this.toast('Lançamento salvo')},clearServiceFilters(){this.serviceFilter='todos';this.serviceCategoryFilter='todas';this.serviceProviderFilter='todos';this.serviceMonthFilter=''},clearReceiptFilters(){this.receiptFilter={q:'',month:'',category:'todas'}},fillServiceFromProvider(p){this.serviceForm.providerId=p.id;this.serviceForm.category=p.category||this.serviceForm.category;this.view='servicos';this.after()},openDuplicateModal(s){if(this.isViewer)return;this.actionModal={open:true,type:'duplicate',tone:'default',icon:'copy-plus',target:s,service:s,title:'Duplicar lançamento',subtitle:'Criar uma nova cópia para a referência atual.',note:'O novo lançamento será criado como pendente, sem pagamento e sem recibo, preservando a numeração oficial.',confirmLabel:'Duplicar',details:[{label:'Prestador',value:this.providerName(s.providerId)},{label:'Categoria',value:s.category||'-'},{label:'Valor',value:this.money(s.amount||0)}]};this.after()},openDeleteServiceModal(s){if(this.isViewer)return;this.actionModal={open:true,type:'deleteService',tone:'danger',icon:'trash-2',target:s,service:s,title:'Excluir lançamento',subtitle:'Essa ação remove apenas este lançamento da lista de serviços.',note:'Lançamentos com pagamento ou recibo vinculado não podem ser excluídos por aqui. Use o fluxo de pagamentos/recibos para preservar o histórico.',confirmLabel:'Excluir',details:[{label:'Prestador',value:this.providerName(s.providerId)},{label:'Categoria',value:s.category||'-'},{label:'Valor',value:this.money(s.amount||0)}]};this.after()},
+
+===== saveRecurrence( @ 6481119 =====
+s.update(d.id,d);await this.logAction('provider','Prestador atualizado',d.name||'Cadastro atualizado')}else{delete d.id;await db.providers.add(d);await this.logAction('provider','Prestador cadastrado',d.name||'Novo prestador')}this.resetProvider();await this.load();this.toast('Prestador salvo')},openDeleteProviderModal(p){if(this.isViewer)return;this.actionModal={open:true,type:'deleteProvider',tone:'danger',icon:'user-x',target:p,service:null,title:'Excluir prestador',subtitle:'Essa ação remove o cadastro do prestador.',note:'Prestadores com lançamentos, recibos ou recorrências vinculadas não podem ser excluídos. Isso preserva a rastreabilidade do histórico.',confirmLabel:'Excluir prestador',details:[{label:'Prestador',value:p.name||'-'},{label:'Categoria',value:p.category||'-'},{label:'Documento',value:p.document||'não informado'}]};this.after()},async removeProviderInternal(id){let p=this.providers.find(x=>Number(x.id)===Number(id));if(!p)return;let linkedServices=this.services.some(s=>Number(s.providerId)===Number(id)),linkedReceipts=this.receipts.some(r=>Number(r.providerId)===Number(id)),linkedRecurrences=(this.recurrences||[]).some(r=>Number(r.providerId)===Number(id));if(linkedServices||linkedReceipts||linkedRecurrences){return this.toast('Este prestador possui histórico ou recorrência vinculada e não pode ser excluído. Mantenha o cadastro para preservar a rastreabilidade.','warning')}await db.providers.delete(id);await this.logAction('delete','Prestador excluído',p.name||('ID '+id));await this.load()},
+  resetRecurrence(){this.recurrenceForm={id:null,providerId:'',category:'Jardineiro',amount:0,dueDay:5,paymentDay:5,paymentMethod:'PIX',location:'',description:'',active:true}},editRecurrence(r){this.recurrenceForm={...r};this.view='servicos';this.after()},async saveRecurrence(){if(this.isViewer)return;let d={...this.recurrenceForm,providerId:Number(this.recurrenceForm.providerId),amount:Number(this.recurrenceForm.amount||0),dueDay:Number(this.recurrenceForm.dueDay||1),paymentDay:Number(this.recurrenceForm.paymentDay||this.recurrenceForm.dueDay||1),active:!!this.recurrenceForm.active};if(d.id){await db.recurrences.update(d.id,d);await this.logAction('recurrence','Recorrência atualizada',this.providerName(d.providerId)+' • '+this.money(d.amount||0))}else{delete d.id;await db.recurrences.add(d);await this.logAction('recurrence','Recorrência criada',this.providerName(d.providerId)+' • '+this.money(d.amount||0))}this.resetRecurrence();await this.load();this.toast('Recorrência salva. Lançamentos gerados mensalmente.')},recurrenceGenerated(r,ref=this.today().slice(0,7)){return this.services.some(s=>Number(s.recurrenceId)===Number(r.id)&&s.reference===ref)},dateForDay(ref,day){let [y,m]=String(ref).split('-').map(Number);let last=new Date(y,m,0).getDate();let d=String(Math.min(Math.max(Number(day||1),1),last)).padStart(2,'0');return ref+'-'+d},async generateRecurrence(r,ref=this.today().slice(0,7)){if(this.isViewer)return;if(!r.active)return this.toast('Esta recorrência está inativa.','warning');if(this.recurrenceGenerated(r,ref))return this.toast('Lançamento já gerado para '+this.month(ref)+'.','warning');let d={providerId:Number(r.providerId),category:r.category,reference:ref,serviceDate:this.dateForDay(ref,r.paymentDay||r.dueDay),dueDate:this.dateForDay(ref,r.dueDay),amount:Number(r.amount||0),location:r.location||'',description:r.description||'Serviço recorrente mensal',status:'Pendente',paidValue:0,paymentDate:'',paymentMethod:r.paymentMethod||'',recurrenceId:r.id};await db.services.add(d);await this.logAction('recurrence','Lançamento recorrente gerado',this.providerName(r.providerId)+' • '+this.month(ref)+' • '+this.money(r.amount||0));await this.load();this.toast('Lançamento de '+this.month(ref)+' gerado.')},async generateAllRecurrencesForMonth(){if(this.isViewer)return;let active=this.recurrences.filter(r=>r.active);if(!active.length)return alert('Nenhuma recorrência ativa.');let count=0;for(const r of active){if(!this.recurrenceGenerated(r)){let d={providerId:Number(r.providerId),category:r.category,reference:this.today().slice(0,7),serviceDate:this.dateForDay(this.today().slice(0,7),r.paymentDay||r.dueDay),dueDate:this.dateForDay(this.today().slice(0,7),r.dueDay),amount:Number(r.amount||0),location:r.location||'',description:r.description||'Serviço recorrente mensal',status:'Pendente',paidValue:0,paymentDate:'',paymentMethod:r.paymentMethod||'',recurrenceId:r.id};await db.services.add(d);await this.logAction('recurrence','Lançamento recorrente gerado',this.providerName(r.providerId)+' • '+this.month(this.today().slice(0,7))+' • '+this.money(r.amount||0));count++}}await this.load();this.toast(count+' lançamento(s) gerado(s) para '+this.month(this.today().slice(0,7))+'.')},async toggleRecurrence(r){if(this.isViewer)return;await db.recurrences.update(r.id,{active:!r.active});await this.load()},openDeleteRecurrenceModal(r){if(this.isViewer)return;this.actionModal={open:true,type:'deleteRecurrence',tone:'danger',icon:'repeat-2',target:r,service:null,title:'Excluir recorrência',subtitle:'Remove apenas a regra recorrente quando ainda não há histórico gerado.',note:'Se esta recorrência já gerou lançamentos, ela deverá ser inativada em vez de excluída, preservando a origem do histórico.',confirmLabel:'Excluir recorrência',details:[{label:'Prestador',value:this.providerName(r.providerId)},{label:'Categoria',value:r.category||'-'},{label:'Valor padrão',value:this.money(r.amount||0)}]};this.after()},async removeRecurrenceInternal(id){let r=this.recurrences.find(x=>Number(x.id)===Number(id));if(!r)return;let linked=this.services.some(s=>Number(s.recurrenceId)===Number(id));if(linked){if(r.active)await db.recurrences.update(id,{active:false});await this.logAction('recurrence','Recorrência preservada como inativa',this.providerName(r.providerId)+' • '+this.money(r.amount||0));await this.load();return this.toast('Esta recorrência já possui lançamentos gerados e foi mantida como inativa para preservar o histórico.','warning')}await db.recurrences.delete(id);await this.logAction('delete','Recorrência excluída',this.providerName(r.providerId)+' • '+this.money(r.amount||0));await this.load()},async saveService(){if(this.isViewer)return;let paid=Number(this.serviceForm.paidValue||0), amount=Number(this.serviceForm.amount||0);if(!Number.isFinite(amount)||amount<=0)return this.toast('Informe um valor de serviço maior que zero.','warning');if(!Number.isFinite(paid)||paid<0)return this.toast('Informe um valor pago válido.','warning');if(paid>amount+0.000001)return this.toast('O valor pago não pode ser maior que o valor do serviço.','warning');let status=paid<=0?'Pendente':(paid>=amount?'Pago':'Parcial');let d={...this.serviceForm,providerId:Number(this.serviceForm.providerId),amount,pai
+
+===== recurrenceForm @ 2180627 =====
+ion>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Valor pago</span><input x-model.number="serviceForm.paidValue" type="number" step="0.01" class="input mt-1" placeholder="0,00"></label>
+              </div>
+            </div>
+            <label><span class="text-sm font-bold">Descrição detalhada</span><textarea x-model="serviceForm.description" required class="input mt-1 min-h-[90px]"></textarea></label>
+            <button class="primary w-full" :disabled="isViewer">Salvar lançamento</button>
+          </form>
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-rc-600 dark:text-rc-300 font-black">Automação segura</p>
+                <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.description"></p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button @click="generateRecurrence(r)" class="mini" :disabled="isViewer || recurrenceGenerated(r)">Gerar lançamento</button>
+                    <button @click="editRecurrence(r)" class="mini" :disabled="isViewer">Editar</button>
+                    <button @click="toggleRecurrence(r)" class="mini" :disabled="isViewer" x-text="r.active?'Inativar':'Ativar'"></button>
+                    <button @click="openDeleteRecurrenceModal(r)" class="danger" :disabled="isViewer">Excluir</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p x-show="!recurrences.length" class="text-sm text-slate-500 text-center py-3">Nenhuma recorrência cadastrada ainda.</p>
+          </div>
+          <div class="glass rounded-3xl p-4 overflow-hidden"><div class="flex flex-col gap-3 mb-3"><div class="flex items-center justify-between gap-2"><h3 class="font-black text-lg">Serviços e gratificações</h3><span class="badge" x-text="filteredServices.length+' visíveis'"></span></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"><select x-model="serviceFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select><select x-model="serviceCategoryFilter" class="input"><option value="todas">Todas as categorias</option><template x-for="c in categories"><option x-text="c"></option></template></select><select x-model="serviceProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-f
+
+===== recurrenceForm @ 2180914 =====
+r" step="0.01" class="input mt-1" placeholder="0,00"></label>
+              </div>
+            </div>
+            <label><span class="text-sm font-bold">Descrição detalhada</span><textarea x-model="serviceForm.description" required class="input mt-1 min-h-[90px]"></textarea></label>
+            <button class="primary w-full" :disabled="isViewer">Salvar lançamento</button>
+          </form>
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-rc-600 dark:text-rc-300 font-black">Automação segura</p>
+                <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.description"></p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button @click="generateRecurrence(r)" class="mini" :disabled="isViewer || recurrenceGenerated(r)">Gerar lançamento</button>
+                    <button @click="editRecurrence(r)" class="mini" :disabled="isViewer">Editar</button>
+                    <button @click="toggleRecurrence(r)" class="mini" :disabled="isViewer" x-text="r.active?'Inativar':'Ativar'"></button>
+                    <button @click="openDeleteRecurrenceModal(r)" class="danger" :disabled="isViewer">Excluir</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p x-show="!recurrences.length" class="text-sm text-slate-500 text-center py-3">Nenhuma recorrência cadastrada ainda.</p>
+          </div>
+          <div class="glass rounded-3xl p-4 overflow-hidden"><div class="flex flex-col gap-3 mb-3"><div class="flex items-center justify-between gap-2"><h3 class="font-black text-lg">Serviços e gratificações</h3><span class="badge" x-text="filteredServices.length+' visíveis'"></span></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"><select x-model="serviceFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select><select x-model="serviceCategoryFilter" class="input"><option value="todas">Todas as categorias</option><template x-for="c in categories"><option x-text="c"></option></template></select><select x-model="serviceProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select><input x-model="serviceMonthFilter" type="month" class="input" title="Filtrar por referência"></div><button @click="clearServiceFilters" class="secondary w-full sm:w-auto sm:self-end">Limpar filtros</
+
+===== recurrenceForm @ 2181146 =====
+class="input mt-1 min-h-[90px]"></textarea></label>
+            <button class="primary w-full" :disabled="isViewer">Salvar lançamento</button>
+          </form>
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-rc-600 dark:text-rc-300 font-black">Automação segura</p>
+                <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.description"></p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button @click="generateRecurrence(r)" class="mini" :disabled="isViewer || recurrenceGenerated(r)">Gerar lançamento</button>
+                    <button @click="editRecurrence(r)" class="mini" :disabled="isViewer">Editar</button>
+                    <button @click="toggleRecurrence(r)" class="mini" :disabled="isViewer" x-text="r.active?'Inativar':'Ativar'"></button>
+                    <button @click="openDeleteRecurrenceModal(r)" class="danger" :disabled="isViewer">Excluir</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p x-show="!recurrences.length" class="text-sm text-slate-500 text-center py-3">Nenhuma recorrência cadastrada ainda.</p>
+          </div>
+          <div class="glass rounded-3xl p-4 overflow-hidden"><div class="flex flex-col gap-3 mb-3"><div class="flex items-center justify-between gap-2"><h3 class="font-black text-lg">Serviços e gratificações</h3><span class="badge" x-text="filteredServices.length+' visíveis'"></span></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"><select x-model="serviceFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select><select x-model="serviceCategoryFilter" class="input"><option value="todas">Todas as categorias</option><template x-for="c in categories"><option x-text="c"></option></template></select><select x-model="serviceProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select><input x-model="serviceMonthFilter" type="month" class="input" title="Filtrar por referência"></div><button @click="clearServiceFilters" class="secondary w-full sm:w-auto sm:self-end">Limpar filtros</button></div><div class="overflow-auto scrollbar"><table class="w-full text-sm"><thead class="text-left text-slate-500"><tr><th class="p-2">Prestador</th><th class="p-2">Serviço</th><th class="p-2">Valor</th><th class="p-2">Status</
+
+===== recurrenceForm @ 2181331 =====
+ass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-rc-600 dark:text-rc-300 font-black">Automação segura</p>
+                <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.description"></p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button @click="generateRecurrence(r)" class="mini" :disabled="isViewer || recurrenceGenerated(r)">Gerar lançamento</button>
+                    <button @click="editRecurrence(r)" class="mini" :disabled="isViewer">Editar</button>
+                    <button @click="toggleRecurrence(r)" class="mini" :disabled="isViewer" x-text="r.active?'Inativar':'Ativar'"></button>
+                    <button @click="openDeleteRecurrenceModal(r)" class="danger" :disabled="isViewer">Excluir</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p x-show="!recurrences.length" class="text-sm text-slate-500 text-center py-3">Nenhuma recorrência cadastrada ainda.</p>
+          </div>
+          <div class="glass rounded-3xl p-4 overflow-hidden"><div class="flex flex-col gap-3 mb-3"><div class="flex items-center justify-between gap-2"><h3 class="font-black text-lg">Serviços e gratificações</h3><span class="badge" x-text="filteredServices.length+' visíveis'"></span></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"><select x-model="serviceFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select><select x-model="serviceCategoryFilter" class="input"><option value="todas">Todas as categorias</option><template x-for="c in categories"><option x-text="c"></option></template></select><select x-model="serviceProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select><input x-model="serviceMonthFilter" type="month" class="input" title="Filtrar por referência"></div><button @click="clearServiceFilters" class="secondary w-full sm:w-auto sm:self-end">Limpar filtros</button></div><div class="overflow-auto scrollbar"><table class="w-full text-sm"><thead class="text-left text-slate-500"><tr><th class="p-2">Prestador</th><th class="p-2">Serviço</th><th class="p-2">Valor</th><th class="p-2">Status</th><th class="p-2">Ações</th></tr></thead><tbody><template x-for="s in filteredServices" :key="s.id"><tr class="border-t border-slate-200/60 dark:border-slate-700/60"><td class="p-2"><b
+
+===== recurrenceForm @ 2181604 =====
+           <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.description"></p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button @click="generateRecurrence(r)" class="mini" :disabled="isViewer || recurrenceGenerated(r)">Gerar lançamento</button>
+                    <button @click="editRecurrence(r)" class="mini" :disabled="isViewer">Editar</button>
+                    <button @click="toggleRecurrence(r)" class="mini" :disabled="isViewer" x-text="r.active?'Inativar':'Ativar'"></button>
+                    <button @click="openDeleteRecurrenceModal(r)" class="danger" :disabled="isViewer">Excluir</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p x-show="!recurrences.length" class="text-sm text-slate-500 text-center py-3">Nenhuma recorrência cadastrada ainda.</p>
+          </div>
+          <div class="glass rounded-3xl p-4 overflow-hidden"><div class="flex flex-col gap-3 mb-3"><div class="flex items-center justify-between gap-2"><h3 class="font-black text-lg">Serviços e gratificações</h3><span class="badge" x-text="filteredServices.length+' visíveis'"></span></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"><select x-model="serviceFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select><select x-model="serviceCategoryFilter" class="input"><option value="todas">Todas as categorias</option><template x-for="c in categories"><option x-text="c"></option></template></select><select x-model="serviceProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select><input x-model="serviceMonthFilter" type="month" class="input" title="Filtrar por referência"></div><button @click="clearServiceFilters" class="secondary w-full sm:w-auto sm:self-end">Limpar filtros</button></div><div class="overflow-auto scrollbar"><table class="w-full text-sm"><thead class="text-left text-slate-500"><tr><th class="p-2">Prestador</th><th class="p-2">Serviço</th><th class="p-2">Valor</th><th class="p-2">Status</th><th class="p-2">Ações</th></tr></thead><tbody><template x-for="s in filteredServices" :key="s.id"><tr class="border-t border-slate-200/60 dark:border-slate-700/60"><td class="p-2"><b x-text="providerName(s.providerId)"></b><br><span class="text-xs text-slate-500" x-text="month(s.reference)+' • '+fmt(s.serviceDate)"></span></td><td class="p-2"><span class="badge" x-text="s.category"></span><br><span class="text-xs" x-text="s.description"></span></td><t
+
+===== recurrenceForm @ 2181781 =====
+rrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.description"></p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    <button @click="generateRecurrence(r)" class="mini" :disabled="isViewer || recurrenceGenerated(r)">Gerar lançamento</button>
+                    <button @click="editRecurrence(r)" class="mini" :disabled="isViewer">Editar</button>
+                    <button @click="toggleRecurrence(r)" class="mini" :disabled="isViewer" x-text="r.active?'Inativar':'Ativar'"></button>
+                    <button @click="openDeleteRecurrenceModal(r)" class="danger" :disabled="isViewer">Excluir</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <p x-show="!recurrences.length" class="text-sm text-slate-500 text-center py-3">Nenhuma recorrência cadastrada ainda.</p>
+          </div>
+          <div class="glass rounded-3xl p-4 overflow-hidden"><div class="flex flex-col gap-3 mb-3"><div class="flex items-center justify-between gap-2"><h3 class="font-black text-lg">Serviços e gratificações</h3><span class="badge" x-text="filteredServices.length+' visíveis'"></span></div><div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-2"><select x-model="serviceFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select><select x-model="serviceCategoryFilter" class="input"><option value="todas">Todas as categorias</option><template x-for="c in categories"><option x-text="c"></option></template></select><select x-model="serviceProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select><input x-model="serviceMonthFilter" type="month" class="input" title="Filtrar por referência"></div><button @click="clearServiceFilters" class="secondary w-full sm:w-auto sm:self-end">Limpar filtros</button></div><div class="overflow-auto scrollbar"><table class="w-full text-sm"><thead class="text-left text-slate-500"><tr><th class="p-2">Prestador</th><th class="p-2">Serviço</th><th class="p-2">Valor</th><th class="p-2">Status</th><th class="p-2">Ações</th></tr></thead><tbody><template x-for="s in filteredServices" :key="s.id"><tr class="border-t border-slate-200/60 dark:border-slate-700/60"><td class="p-2"><b x-text="providerName(s.providerId)"></b><br><span class="text-xs text-slate-500" x-text="month(s.reference)+' • '+fmt(s.serviceDate)"></span></td><td class="p-2"><span class="badge" x-text="s.category"></span><br><span class="text-xs" x-text="s.description"></span></td><td class="p-2"><b x-text="money(s.amount)"></b><br><span class="text-xs text-slate-500" x-text="'Pago: '+money(s.paidValue||0)"></span><br><span class="text-xs text-slate-500" x-
+
+===== dueDate @ 2157208 =====
+how="p.open>0" x-text="'Aberto: '+money(p.open)"></p></div>
+                  </div>
+                </template>
+                <p x-show="!annualTopProviders.length" class="text-sm text-slate-500">Sem movimentação no ano selecionado.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid xl:grid-cols-3 gap-4">
+            <div class="glass rounded-3xl p-4 xl:col-span-2">
+              <h3 class="font-black mb-3">Leitura rápida por categoria</h3>
+              <div class="space-y-3">
+                <template x-for="c in annualCategorySummary.slice(0,8)" :key="c.category">
+                  <div>
+                    <div class="flex justify-between text-sm mb-1"><b x-text="c.category"></b><span x-text="money(c.total)"></span></div>
+                    <div class="h-2.5 rounded-full bg-slate-200/70 dark:bg-slate-700 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-rc-800 via-rc-gold to-rc-500" :style="'width:'+c.percent+'%'"></div></div>
+                  </div>
+                </template>
+                <p x-show="!annualCategorySummary.length" class="text-sm text-slate-500">Sem categorias movimentadas no ano selecionado.</p>
+              </div>
+            </div>
+            <div class="glass rounded-3xl p-4">
+              <h3 class="font-black mb-3">Pendências em aberto</h3>
+              <div class="space-y-2 max-h-72 overflow-auto scrollbar"><template x-for="s in criticalOpen" :key="s.id"><div class="rounded-2xl bg-red-500/10 border border-red-500/20 p-3"><div class="flex justify-between gap-2"><span class="font-bold" x-text="providerName(s.providerId)"></span><span class="text-red-600 font-black" x-text="money(balance(s))"></span></div><p class="text-xs text-slate-500" x-text="s.category+' • vence '+fmt(s.dueDate)+' • '+overdueLabel(s)"></p></div></template><p x-show="!criticalOpen.length" class="text-sm text-slate-500">Nenhuma pendência no momento.</p></div>
+            </div>
+          </div>
+        </section>
+
+        <section x-show="view==='prestadores'" class="space-y-4 min-w-0 max-w-full">
+          <form @submit.prevent="saveProvider" class="glass rounded-3xl p-4 md:p-5 space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.22em] text-emerald-600 dark:text-emerald-400 font-black">Cadastro rápido</p>
+                <h3 class="font-black text-xl">Cadastro de prestador</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Inclua jardineiro, vidraceiro, eletricista, pedreiro, paisagista, gratificação natalina e demais serviços.</p>
+              </div>
+              <div class="flex gap-2 w-full lg:w-auto">
+                <button class="primary flex-1 lg:flex-none" :disabled="isViewer">Salvar prestador</button>
+                <button type="button" @click="resetProvider" class="secondary">Limpar</button>
+              </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <label><span class="text-sm font-bold">Nome/Razão social</span><input x-model="providerForm.name" required class="input mt-1" placeholder="Ex.: João Jardineiro"></label>
+              <label><span class="text-sm font-bold">Tipo</span><select x-model="providerForm.type" class="input mt-1"><option>Autônomo</option><option>MEI</option><option>Empresa</option><option>Funcionário eventual</option></select></label>
+              <label><span class="text-sm font-bold">CPF/CNPJ</span><input x-model="providerForm.document" class="input mt-1" placeholder="Opcional"></label>
+              <label><span class="text-sm font-bold">Categoria principal</span><select x-model="providerForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+            </div>
+
+            <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <label><span class="text-sm font-bold">Telefone</span><input x-model="providerForm.phone" class="input mt-1" placeholder="(11) 0000-0000"></label>
+              <label><span class="text-sm font-bold">WhatsApp</span><input x-model="providerForm.whatsapp" class="input mt-1" placeholder="(11) 90000-0000"></label>
+              <label class="xl:col-span-2"><span class="text-sm font-bold">Chave PIX / Dados bancários</span><input x-model="providerForm.pix" class="input mt-1" placeholder="PIX, banco, agência, conta..."></label>
+            </div>
+
+            <label><span class="text-sm font-bold">Observações</span><textarea x-model="providerForm.notes" class="input mt-1 min-h-[86px]" placeholder="Observações sobre disponibilidade, especialidade, garantia, indicação, restrições de acesso..."></textarea></label>
+          </form>
+
+          <div x-show="selectedProvider" x-transition class="glass rounded-3xl p-4 md:p-5 overflow-hidden">
+            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-4">
+              <div>
+                <p class="text-xs uppercase tracking-[.22em] text-amber-600 dark:text-amber-300 font-black">Painel do prestador</p>
+                <h3 class="font-black text-xl" x-text="selectedProvider?.name"></h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400"><span x-text="selectedProvider?.category"></span> • <span x-text="selectedProvider?.type"></span> • <span x-text="selectedProvider?.document || 'sem documento'"></span></p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button @click="fillServiceFromProvider(selectedProvider)" class="primary" :disabled="isViewer">Lançar serviço</button>
+                <button @click="openWhatsapp(selectedProvider)" class="secondary">WhatsApp</button>
+                <button @click="selectedProviderId=null" class="secondary">Fechar painel</button>
+              </div>
+            </div>
+
+            <div class="grid md:grid-cols-4 gap-3 mb-4">
+              <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Total movimentado</p><b class="text-lg" x-text="money(providerSpend(selectedProvider?.id))"></b></div>
+              <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Em aberto</p><b class="text-lg text-red-600" x-text="money(providerOpen(selectedProvider?.id))"></b></div>
+              <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] 
+
+===== dueDate @ 2177549 =====
+'Recorrência pendente • '+money(r.amount)"></p></div>
+                  </template>
+                  <p x-show="!servicePanelOpenRows.length && !servicePanelPendingRecurrences.length" class="text-sm text-slate-500 text-center py-3">Mês sem pendências operacionais.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <form @submit.prevent="saveService" class="glass rounded-3xl p-4 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><div><h3 class="font-black text-lg">Lançar serviço/pagamento</h3><p class="text-xs text-slate-500 dark:text-slate-400">Cadastre primeiro o serviço, gratificação ou pagamento avulso. A lista de lançamentos fica organizada logo abaixo.</p></div><span class="badge">novo lançamento</span></div>
+            <div class="grid md:grid-cols-3 gap-3"><label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="serviceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label><label><span class="text-sm font-bold">Categoria</span><select x-model="serviceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label><label><span class="text-sm font-bold">Referência</span><input x-model="serviceForm.reference" type="month" required class="input mt-1"></label></div>
+            <div class="grid sm:grid-cols-2 gap-3"><label><span class="text-sm font-bold">Data do serviço</span><input x-model="serviceForm.serviceDate" type="date" required class="input mt-1"></label><label><span class="text-sm font-bold">Vencimento</span><input x-model="serviceForm.dueDate" type="date" required class="input mt-1"></label></div>
+            <div class="grid sm:grid-cols-2 gap-3"><label><span class="text-sm font-bold">Valor do serviço</span><input x-model.number="serviceForm.amount" type="number" step="0.01" required class="input mt-1"></label><label><span class="text-sm font-bold">Local/Área</span><input x-model="serviceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label></div>
+            <div class="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-3">
+              <div class="flex items-start gap-2"><i data-lucide="circle-dollar-sign" class="w-4 h-4 mt-0.5 text-emerald-700"></i><div><p class="text-sm font-black">Dados do pagamento</p><p class="text-xs text-slate-500 dark:text-slate-400">Preencha se o serviço já foi pago. Esses campos sairão no recibo oficial.</p></div></div>
+              <div class="grid sm:grid-cols-3 gap-3">
+                <label><span class="text-sm font-bold">Data do pagamento</span><input x-model="serviceForm.paymentDate" type="date" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma de pagamento</span><select x-model="serviceForm.paymentMethod" class="input mt-1"><option value="">Não informado</option><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Valor pago</span><input x-model.number="serviceForm.paidValue" type="number" step="0.01" class="input mt-1" placeholder="0,00"></label>
+              </div>
+            </div>
+            <label><span class="text-sm font-bold">Descrição detalhada</span><textarea x-model="serviceForm.description" required class="input mt-1 min-h-[90px]"></textarea></label>
+            <button class="primary w-full" :disabled="isViewer">Salvar lançamento</button>
+          </form>
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-rc-600 dark:text-rc-300 font-black">Automação segura</p>
+                <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea>
+
+===== dueDate @ 2192187 =====
+ed-3xl border border-blue-500/20 bg-blue-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-blue-700 font-black">Vence hoje</p><p class="text-xl font-black text-blue-700" x-text="paymentSummary.today"></p><p class="text-xs text-blue-700/80">ação imediata</p></div>
+              <div class="rounded-3xl border border-rc-gold/30 bg-amber-50 p-3"><p class="text-xs uppercase tracking-[.16em] text-amber-800 font-black">Sem recibo</p><p class="text-xl font-black text-rc-gold" x-text="paymentSummary.missingReceipt"></p><p class="text-xs text-amber-800/80">pagos sem recibo</p></div>
+            </div>
+          </div>
+
+          <div class="grid xl:grid-cols-3 gap-4">
+            <div class="glass rounded-3xl p-4 xl:col-span-2 overflow-hidden">
+              <div class="flex items-center justify-between gap-2 mb-3"><div><h3 class="font-black text-lg">Fila de pagamentos</h3><p class="text-xs text-slate-500">Pague, confira recibos e acompanhe vencimentos sem voltar para Serviços.</p></div><span class="badge" x-text="filteredPayments.length+' itens'"></span></div>
+              <div class="overflow-auto scrollbar rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
+                <table class="w-full text-sm">
+                  <thead class="text-left text-slate-500 bg-slate-50/80 dark:bg-slate-900/50"><tr><th class="p-3">Vencimento</th><th class="p-3">Prestador / Serviço</th><th class="p-3">Valores</th><th class="p-3">Status</th><th class="p-3">Ações</th></tr></thead>
+                  <tbody>
+                    <template x-for="s in filteredPayments" :key="s.id">
+                      <tr class="border-t border-slate-200/60 dark:border-slate-700/60 hover:bg-emerald-500/5 transition">
+                        <td class="p-3 min-w-[120px]"><b x-text="fmt(s.dueDate)"></b><br><span class="text-xs text-slate-500" x-text="month(s.reference)"></span></td>
+                        <td class="p-3 min-w-[260px]"><b x-text="providerName(s.providerId)"></b><br><span class="badge" x-text="s.category"></span><p class="text-xs text-slate-500 mt-1" x-text="s.description||'-'"></p></td>
+                        <td class="p-3 min-w-[160px]"><b x-text="money(s.amount)"></b><br><span class="text-xs text-emerald-700" x-text="'Pago: '+money(s.paidValue||0)"></span><br><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="'Aberto: '+money(balance(s))"></span></td>
+                        <td class="p-3 min-w-[150px]"><span class="badge" :class="statusClass(s.status)" x-text="s.status"></span><br><span class="text-xs text-slate-500" x-show="s.paymentDate" x-text="fmt(s.paymentDate)+' • '+(s.paymentMethod||'forma não informada')"></span><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="overdueLabel(s)"></span></td>
+                        <td class="p-3 min-w-[150px]"><select class="input py-2 text-xs font-black" @change="paymentAction($event.target.value,s); $event.target.value=''"><option value="">Ações</option><option value="pagar" :disabled="isViewer || s.status==='Pago'">Pagar</option><option value="recibo" :disabled="isViewer || Number(s.paidValue||0)<=0" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></option><option value="servico">Abrir serviço</option><option value="excluirPagamento" :disabled="isViewer || Number(s.paidValue||0)<=0">Excluir pagamento</option></select></td>
+                      </tr>
+                    </template>
+                    <tr x-show="!filteredPayments.length"><td colspan="5" class="p-6 text-center text-slate-500">Nenhum pagamento encontrado para os filtros selecionados.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="glass rounded-3xl p-4 space-y-3">
+              <h3 class="font-black text-lg">Últimos pagamentos</h3>
+              <template x-for="s in paymentRecent" :key="'recent-pay-'+s.id">
+                <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3"><div><p class="font-black text-sm" x-text="providerName(s.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(s.paymentDate)+' • '+(s.paymentMethod||'forma não informada')"></p></div><p class="font-black text-emerald-700" x-text="money(s.paidValue||0)"></p></div>
+                  <div class="flex flex-wrap gap-2 mt-2"><button @click="quickReceipt(s)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></button><button @click="openSearchService(s)" class="mini">Serviço</button><button @click="openDeletePaymentModal(s)" class="danger" :disabled="isViewer || Number(s.paidValue||0)<=0">Excluir pagamento</button></div>
+                </div>
+              </template>
+              <p x-show="!paymentRecent.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado ainda.</p>
+            </div>
+          </div>
+        </section>
+
+        <section x-show="view==='recibos'" class="space-y-4">
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-emerald-600 dark:text-emerald-400 font-black">Emissão</p>
+                <h3 class="font-black text-lg">Emitir recibo profissional</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Selecione um serviço/pagamento já lançado para gerar o recibo formal.</p>
+              </div>
+              <div class="rounded-2xl px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 text-sm">
+                <b x-text="receipts.length"></b> recibos no histórico
+              </div>
+            </div>
+            <div class="grid lg:grid-cols-[1fr_auto] gap-3 items-end">
+              <label>
+                <span class="text-sm font-bold">Lançamento para emissão</span>
+                <select x-model="receiptServiceId" class="input mt-1">
+                  <option value="">Selecione um serviço/pagamento</option>
+                  <template x-for="s in services">
+                    <option :value="s.id" x-text="'#'+s.id+' • '+providerName(s.providerId)+' • '+s.category+' • '+money(s.amount)"></option>
+                  </template>
+                </select>
+              </label>
+              <div class="grid sm:grid-cols-2 gap-2 lg:min-w-[360px]">
+                <button @click="issueReceipt" class="primary w-full" :disabled="isViewer">Emitir recibo</button>
+                <button @click="printReceipt" class="secondary w-full">Imprimir / Salvar PDF</button>
+              </div>
+            </div>
+            <div class="round
+
+===== dueDate @ 2221714 =====
+        <div>
+              <p class="text-xs uppercase tracking-[.18em] text-rc-gold font-black">Janela flutuante</p>
+              <h3 class="font-black text-xl">Registrar pagamento</h3>
+              <p class="text-sm text-slate-500" x-text="paymentTarget ? providerName(paymentTarget.providerId)+' • '+paymentTarget.category : ''"></p>
+            </div>
+            <button @click="payModal=false" class="secondary px-3 py-2">Fechar</button>
+          </div>
+          <div class="grid sm:grid-cols-3 gap-3" x-show="paymentTarget">
+            <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.14em] text-slate-500 font-black">Valor do serviço</p><p class="text-lg font-black" x-text="money(paymentTarget?.amount||0)"></p></div>
+            <div class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3"><p class="text-xs uppercase tracking-[.14em] text-emerald-700 font-black">Já pago</p><p class="text-lg font-black text-emerald-700" x-text="money(paymentTarget?.paidValue||0)"></p></div>
+            <div class="rounded-2xl border border-red-500/20 bg-red-500/10 p-3"><p class="text-xs uppercase tracking-[.14em] text-red-700 font-black">Em aberto</p><p class="text-lg font-black text-red-700" x-text="money(paymentTarget?balance(paymentTarget):0)"></p></div>
+          </div>
+          <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3" x-show="paymentTarget">
+            <p class="text-sm"><b>Descrição:</b> <span x-text="paymentTarget?.description||'-'"></span></p>
+            <p class="text-xs text-slate-500 mt-1" x-text="'Referência: '+month(paymentTarget?.reference)+' • Vencimento: '+fmt(paymentTarget?.dueDate)+' • Local: '+(paymentTarget?.location||'-')"></p>
+          </div>
+          <div class="grid sm:grid-cols-3 gap-3">
+            <label><span class="text-sm font-bold">Data do pagamento</span><input x-model="payment.date" type="date" class="input mt-1"></label>
+            <label><span class="text-sm font-bold">Valor pago agora</span><input x-model.number="payment.value" type="number" step="0.01" class="input mt-1"></label>
+            <label><span class="text-sm font-bold">Forma</span><select x-model="payment.method" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+          </div>
+          <div class="grid sm:grid-cols-3 gap-2">
+            <button @click="payment.value=paymentTarget?balance(paymentTarget):0" class="secondary" type="button">Valor em aberto</button>
+            <button @click="payment.value=paymentTarget?Number(paymentTarget.amount||0):0" class="secondary" type="button">Valor integral</button>
+            <button @click="savePayment" class="primary" :disabled="isViewer">Registrar pagamento</button>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="actionModal.open" class="no-print fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4">
+        <div class="glass rounded-3xl p-5 w-full max-w-md space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="h-11 w-11 rounded-2xl grid place-items-center text-white shadow-soft" :class="actionModal.tone==='danger' ? 'bg-red-600' : 'bg-gradient-to-br from-rc-800 to-rc-500'">
+              <i :data-lucide="actionModal.icon || (actionModal.tone==='danger' ? 'trash-2' : 'copy-plus')" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-black text-xl" x-text="actionModal.title"></h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400" x-text="actionModal.subtitle"></p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/25 p-3 text-sm space-y-1">
+            <template x-for="d in actionModal.details" :key="d.label">
+              <p><b x-text="d.label + ':'"></b> <span x-text="d.value"></span></p>
+            </template>
+          </div>
+
+          <p class="text-xs text-slate-500 dark:text-slate-400" x-text="actionModal.note"></p>
+
+          <div class="flex gap-2">
+            <button @click="confirmActionModal" class="flex-1" :class="actionModal.tone==='danger' ? 'danger' : 'primary'" x-text="actionModal.confirmLabel"></button>
+            <button @click="closeActionModal" class="secondary">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="no-print fixed top-4 right-4 z-[80] w-[min(92vw,390px)] space-y-3 pointer-events-none">
+        <template x-for="t in toasts" :key="t.id">
+          <div x-transition.opacity.scale.origin.top.right class="pointer-events-auto rounded-3xl border bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-premium overflow-hidden" :class="t.border">
+            <div class="h-1" :class="t.bar"></div>
+            <div class="p-4 flex gap-3 items-start">
+              <div class="h-10 w-10 rounded-2xl grid place-items-center text-white shrink-0" :class="t.iconBg">
+                <i :data-lucide="t.icon" class="w-5 h-5"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="font-black text-sm text-slate-900 dark:text-white" x-text="t.title"></p>
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mt-1" x-text="t.message"></p>
+              </div>
+              <button @click="dismissToast(t.id)" class="h-8 w-8 rounded-xl grid place-items-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <section class="print-area">
+        <div id="receiptPrint" class="receipt receipt-premium" x-show="currentReceipt">
+          <div class="receipt-watermark">ReciboCondo</div>
+          <div class="pt-7 relative z-10">
+            <div class="flex justify-between gap-6 items-start border-b border-slate-300 pb-5 mb-5">
+              <div class="flex gap-4 items-center">
+                <template x-if="settings.logo"><img :src="settings.logo" class="receipt-app-logo" alt="Logotipo do condomínio"></template>
+                <template x-if="!settings.logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABOYAAATmCAIAAAAKnjl9AABhWmNhQlgAAGFaanVtYgAAAB5qdW1kYzJwYQARABCAAACqADibcQNjMnBhAAAAYTRqdW1iAAAAR2p1bWRjMm1hABEAEIAAAKoAOJtxA3VybjpjMnBhOmQ3YTMzZjMxLWY2NDUtNGY1Yy1iOWI2LTk4OGMyMmViNGI5MwAAABf9anVtYgAAAClqdW1kYzJhcwARABCAAACqADibcQNjMnBhLmFzc2VydGlvbnMAAAAJ0Wp1bWIAAAA7anVtZEDLDDK7ikidpwsq1vR/Q2kTYzJwYS5pY29uAAAAA
+
+===== dueDate @ 6447488 =====
+ </template>
+                  <p x-show="!annualTopProviders.length" class="text-slate-500">Sem movimentação no ano.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="receipt-box p-4 mb-4">
+              <p class="receipt-label mb-2">Categorias mais movimentadas</p>
+              <div class="space-y-2">
+                <template x-for="c in annualCategorySummary.slice(0,8)" :key="c.category">
+                  <div>
+                    <div class="flex justify-between text-[10px] mb-1"><b x-text="c.category"></b><span x-text="money(c.total)"></span></div>
+                    <div class="annual-bar"><span :style="'width:'+c.percent+'%'"></span></div>
+                  </div>
+                </template>
+                <p x-show="!annualCategorySummary.length" class="text-slate-500">Sem categorias movimentadas no ano.</p>
+              </div>
+            </div>
+
+            <div class="report-footer-credit pt-4 border-t border-slate-200 text-[11px] text-slate-500 leading-relaxed">
+              <p><b>Observação:</b> relatório anual emitido para leitura gerencial do condomínio. Os recibos individuais e relatórios mensais permanecem como documentos de conferência e arquivo da prestação de contas.</p>
+              <p class="mt-2 text-center">Documento gerado localmente pelo ReciboCondo PWA • <span x-text="settings.condoName"></span> • <span x-text="fmt(today())"></span></p>
+              <p class="report-dev-credit">Aplicativo desenvolvido por Carlos Cunha</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </template>
+</div>
+<script>
+const db=new Dexie('ReciboCondoPrestadoresDB');
+db.version(1).stores({providers:'++id,name,category,document',services:'++id,providerId,category,reference,serviceDate,dueDate,status',receipts:'++id,number,date,providerName,category',settings:'key',meta:'key'});
+db.version(2).stores({providers:'++id,name,category,document',services:'++id,providerId,category,reference,serviceDate,dueDate,status,recurrenceId',receipts:'++id,number,date,providerName,category',settings:'key',meta:'key',recurrences:'++id,providerId,category,active'});
+db.version(3).stores({providers:'++id,name,category,document',services:'++id,providerId,category,reference,serviceDate,dueDate,status,recurrenceId',receipts:'++id,number,date,providerName,category',settings:'key',meta:'key',recurrences:'++id,providerId,category,active',logs:'++id,at,type,title,detail,role'});
+function app(){return{
+  auth:{logged:false,role:'viewer'},login:{role:'admin',password:''},dark:localStorage.getItem('rc_dark')==='1',view:'dashboard',q:'',charts:{},selectedProviderId:null,activeTooltip:null,
+  menu:[{id:'dashboard',label:'Início',icon:'layout-dashboard'},{id:'prestadores',label:'Prestadores',icon:'users'},{id:'servicos',label:'Serviços',icon:'hard-hat'},{id:'pagamentos',label:'Pagamentos',icon:'wallet-cards'},{id:'recibos',label:'Recibos',icon:'receipt-text'},{id:'relatorios',label:'Relatórios',icon:'file-bar-chart'},{id:'config',label:'Config.',icon:'settings'}],
+  categories:['Jardineiro','Vidraceiro','Serralheiro','Eletricista','Pedreiro','Paisagista','Pintor','Encanador','Limpeza','Dedetização','Manutenção de bomba','Portão/Interfone','Gratificação natalina','Outros'],
+  providers:[],services:[],receipts:[],recurrences:[],logs:[],receiptSeqValue:0,receiptSeqInput:"",settings:{condoName:'Condomínio Exemplo',cnpj:'CNPJ 00.000.000/0001-00',address:'Endereço do condomínio',manager:'Síndico/Tesoureiro',logo:''},
+  providerForm:{id:null,name:'',type:'Autônomo',document:'',category:'Jardineiro',phone:'',whatsapp:'',pix:'',notes:''},providerSearch:'',providerCategoryFilter:'',providerSortField:'name',providerSortDir:'asc',
+  serviceForm:{providerId:'',category:'Jardineiro',reference:new Date().toISOString().slice(0,7),serviceDate:new Date().toISOString().slice(0,10),dueDate:new Date().toISOString().slice(0,10),amount:0,location:'',description:'',paymentDate:'',paymentMethod:'',paidValue:0},
+  recurrenceForm:{id:null,providerId:'',category:'Jardineiro',amount:0,dueDay:5,paymentDay:5,paymentMethod:'PIX',location:'',description:'',active:true},
+  serviceFilter:'todos',serviceCategoryFilter:'todas',serviceProviderFilter:'todos',serviceMonthFilter:'',paymentMonthFilter:new Date().toISOString().slice(0,7),paymentStatusFilter:'todos',paymentProviderFilter:'todos',receiptFilter:{q:'',month:'',category:'todas'},receiptServiceId:'',currentReceipt:null,dashboardYear:new Date().getFullYear(),payModal:false,paymentTarget:null,payment:{date:new Date().toISOString().slice(0,10),value:0,method:'PIX'},actionModal:{open:false,type:'',tone:'default',icon:'',target:null,service:null,title:'',subtitle:'',note:'',confirmLabel:'',details:[]},toasts:[],
+  report:{from:new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10),to:new Date().toISOString().slice(0,10),category:'todas',status:'todos'},passwords:{admin:'',viewer:''},
+  async init(){document.documentElement.classList.toggle('dark',this.dark);window.alert=(msg)=>this.toast(String(msg||''),this.toastType(String(msg||'')));if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(console.warn)}await this.seed();this.refreshIcons()},
+  async seed(){let s=await db.settings.get('main');if(s)this.settings=s.value;await this.load();},
+  async load(){this.providers=await db.providers.toArray();this.services=await db.services.toArray();this.receipts=await db.receipts.toArray();this.recurrences=await db.recurrences.toArray();this.logs=(await db.logs.orderBy('at').reverse().limit(30).toArray());let meta=await db.meta.get('receiptSeq');this.receiptSeqValue=Number(meta?.value||0);if(!this.receiptSeqInput)this.receiptSeqInput=this.nextReceiptNumber();this.after();this.auditDataIntegrity()},auditDataIntegrity(){let issues=[],providerIds=new Set(this.providers.map(p=>Number(p.id))),serviceIds=new Set(this.services.map(s=>Number(s.id))),modernReceipts=this.receipts.filter(r=>r.source!=='Excel legado'),records=this.providers.length+this.services.length+this.receipts.length+this.recurrences.length;for(const s of this.services){if(s.providerId!=null&&s.providerId!==''&&!providerIds.has(Number(s.providerId)))issues.push('Lançamento '+(s.id||'?')+' aponta para prestador inexistente.')}for(const r of this.receipts){if(r.serviceId!=null&&r.serviceId!==''&&!serviceIds.has(Number(r.serviceId)))issues.push('Recibo '+(r.number||r.id||'?')+' aponta para lançamento inexistente.');if(r.providerId!=null&&r.providerId!==''&&!providerIds.has(Number(r.providerId)))issues.push('Recibo '+(r.number||r.id||'?')+' aponta para prestador inexistente.')}let seen=new Set();for(const r of modernReceipts){let n=String(r.number||'').replace(/\D/g,'');if(!n)continue;if(seen.has(n))issues
+
+===== dueDate @ 6447702 =====
+ipt-box p-4 mb-4">
+              <p class="receipt-label mb-2">Categorias mais movimentadas</p>
+              <div class="space-y-2">
+                <template x-for="c in annualCategorySummary.slice(0,8)" :key="c.category">
+                  <div>
+                    <div class="flex justify-between text-[10px] mb-1"><b x-text="c.category"></b><span x-text="money(c.total)"></span></div>
+                    <div class="annual-bar"><span :style="'width:'+c.percent+'%'"></span></div>
+                  </div>
+                </template>
+                <p x-show="!annualCategorySummary.length" class="text-slate-500">Sem categorias movimentadas no ano.</p>
+              </div>
+            </div>
+
+            <div class="report-footer-credit pt-4 border-t border-slate-200 text-[11px] text-slate-500 leading-relaxed">
+              <p><b>Observação:</b> relatório anual emitido para leitura gerencial do condomínio. Os recibos individuais e relatórios mensais permanecem como documentos de conferência e arquivo da prestação de contas.</p>
+              <p class="mt-2 text-center">Documento gerado localmente pelo ReciboCondo PWA • <span x-text="settings.condoName"></span> • <span x-text="fmt(today())"></span></p>
+              <p class="report-dev-credit">Aplicativo desenvolvido por Carlos Cunha</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </template>
+</div>
+<script>
+const db=new Dexie('ReciboCondoPrestadoresDB');
+db.version(1).stores({providers:'++id,name,category,document',services:'++id,providerId,category,reference,serviceDate,dueDate,status',receipts:'++id,number,date,providerName,category',settings:'key',meta:'key'});
+db.version(2).stores({providers:'++id,name,category,document',services:'++id,providerId,category,reference,serviceDate,dueDate,status,recurrenceId',receipts:'++id,number,date,providerName,category',settings:'key',meta:'key',recurrences:'++id,providerId,category,active'});
+db.version(3).stores({providers:'++id,name,category,document',services:'++id,providerId,category,reference,serviceDate,dueDate,status,recurrenceId',receipts:'++id,number,date,providerName,category',settings:'key',meta:'key',recurrences:'++id,providerId,category,active',logs:'++id,at,type,title,detail,role'});
+function app(){return{
+  auth:{logged:false,role:'viewer'},login:{role:'admin',password:''},dark:localStorage.getItem('rc_dark')==='1',view:'dashboard',q:'',charts:{},selectedProviderId:null,activeTooltip:null,
+  menu:[{id:'dashboard',label:'Início',icon:'layout-dashboard'},{id:'prestadores',label:'Prestadores',icon:'users'},{id:'servicos',label:'Serviços',icon:'hard-hat'},{id:'pagamentos',label:'Pagamentos',icon:'wallet-cards'},{id:'recibos',label:'Recibos',icon:'receipt-text'},{id:'relatorios',label:'Relatórios',icon:'file-bar-chart'},{id:'config',label:'Config.',icon:'settings'}],
+  categories:['Jardineiro','Vidraceiro','Serralheiro','Eletricista','Pedreiro','Paisagista','Pintor','Encanador','Limpeza','Dedetização','Manutenção de bomba','Portão/Interfone','Gratificação natalina','Outros'],
+  providers:[],services:[],receipts:[],recurrences:[],logs:[],receiptSeqValue:0,receiptSeqInput:"",settings:{condoName:'Condomínio Exemplo',cnpj:'CNPJ 00.000.000/0001-00',address:'Endereço do condomínio',manager:'Síndico/Tesoureiro',logo:''},
+  providerForm:{id:null,name:'',type:'Autônomo',document:'',category:'Jardineiro',phone:'',whatsapp:'',pix:'',notes:''},providerSearch:'',providerCategoryFilter:'',providerSortField:'name',providerSortDir:'asc',
+  serviceForm:{providerId:'',category:'Jardineiro',reference:new Date().toISOString().slice(0,7),serviceDate:new Date().toISOString().slice(0,10),dueDate:new Date().toISOString().slice(0,10),amount:0,location:'',description:'',paymentDate:'',paymentMethod:'',paidValue:0},
+  recurrenceForm:{id:null,providerId:'',category:'Jardineiro',amount:0,dueDay:5,paymentDay:5,paymentMethod:'PIX',location:'',description:'',active:true},
+  serviceFilter:'todos',serviceCategoryFilter:'todas',serviceProviderFilter:'todos',serviceMonthFilter:'',paymentMonthFilter:new Date().toISOString().slice(0,7),paymentStatusFilter:'todos',paymentProviderFilter:'todos',receiptFilter:{q:'',month:'',category:'todas'},receiptServiceId:'',currentReceipt:null,dashboardYear:new Date().getFullYear(),payModal:false,paymentTarget:null,payment:{date:new Date().toISOString().slice(0,10),value:0,method:'PIX'},actionModal:{open:false,type:'',tone:'default',icon:'',target:null,service:null,title:'',subtitle:'',note:'',confirmLabel:'',details:[]},toasts:[],
+  report:{from:new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10),to:new Date().toISOString().slice(0,10),category:'todas',status:'todos'},passwords:{admin:'',viewer:''},
+  async init(){document.documentElement.classList.toggle('dark',this.dark);window.alert=(msg)=>this.toast(String(msg||''),this.toastType(String(msg||'')));if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js').catch(console.warn)}await this.seed();this.refreshIcons()},
+  async seed(){let s=await db.settings.get('main');if(s)this.settings=s.value;await this.load();},
+  async load(){this.providers=await db.providers.toArray();this.services=await db.services.toArray();this.receipts=await db.receipts.toArray();this.recurrences=await db.recurrences.toArray();this.logs=(await db.logs.orderBy('at').reverse().limit(30).toArray());let meta=await db.meta.get('receiptSeq');this.receiptSeqValue=Number(meta?.value||0);if(!this.receiptSeqInput)this.receiptSeqInput=this.nextReceiptNumber();this.after();this.auditDataIntegrity()},auditDataIntegrity(){let issues=[],providerIds=new Set(this.providers.map(p=>Number(p.id))),serviceIds=new Set(this.services.map(s=>Number(s.id))),modernReceipts=this.receipts.filter(r=>r.source!=='Excel legado'),records=this.providers.length+this.services.length+this.receipts.length+this.recurrences.length;for(const s of this.services){if(s.providerId!=null&&s.providerId!==''&&!providerIds.has(Number(s.providerId)))issues.push('Lançamento '+(s.id||'?')+' aponta para prestador inexistente.')}for(const r of this.receipts){if(r.serviceId!=null&&r.serviceId!==''&&!serviceIds.has(Number(r.serviceId)))issues.push('Recibo '+(r.number||r.id||'?')+' aponta para lançamento inexistente.');if(r.providerId!=null&&r.providerId!==''&&!providerIds.has(Number(r.providerId)))issues.push('Recibo '+(r.number||r.id||'?')+' aponta para prestador inexistente.')}let seen=new Set();for(const r of modernReceipts){let n=String(r.number||'').replace(/\D/g,'');if(!n)continue;if(seen.has(n))issues.push('Número de recibo duplicado: '+String(r.number||n)+'.');seen.add(n)}for(const s of this.services){let linked=modernReceipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r
