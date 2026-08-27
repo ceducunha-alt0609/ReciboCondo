@@ -1,0 +1,36 @@
+name: Inspecionar CSV do relatorio
+on:
+  push:
+    branches: [fix/report-multiple-receipts]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/report-multiple-receipts
+      - name: Extrair funcao CSV
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          hits=[]
+          for term in ['csv(){','CSV','text/csv','reportRows.map','download(']:
+            pos=0
+            while True:
+              i=s.find(term,pos)
+              if i<0: break
+              hits.append('\n===== '+term+' @ '+str(i)+' =====\n'+s[max(0,i-1200):i+2600])
+              pos=i+len(term)
+          Path('csv-inspection.txt').write_text('\n'.join(hits))
+          PY
+      - name: Commit diagnostico
+        run: |
+          git config user.name 'ReciboCondo CSV Inspector'
+          git config user.email 'actions@users.noreply.github.com'
+          git add csv-inspection.txt
+          git commit -m 'Inspect report CSV implementation'
+          git push origin HEAD:fix/report-multiple-receipts
