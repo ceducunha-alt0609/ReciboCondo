@@ -1,0 +1,52 @@
+name: Corrigir descricao de parcelas no recibo
+on:
+  push:
+    branches: [fix/receipt-installment-description]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/receipt-installment-description
+      - name: Ajustar numeracao da parcela na descricao
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="let p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{};let meta=await db.meta.get('receiptSeq')"
+          new="let desc=String(s.description||'').replace(/(\\bparcela\\s+)(\\d+)\\s*\\/\\s*(\\d+)/i,(m,prefix,current,total)=>prefix+String(linked.length+1).padStart(current.length,'0')+'/'+total);let p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{};let meta=await db.meta.get('receiptSeq')"
+          if s.count(old)!=1:
+              raise SystemExit(f'Ponto de insercao encontrado {s.count(old)} vez(es); abortando')
+          s=s.replace(old,new,1)
+          old2="description:s.description,total:pending"
+          new2="description:desc,total:pending"
+          if s.count(old2)!=1:
+              raise SystemExit(f'Campo description encontrado {s.count(old2)} vez(es); abortando')
+          s=s.replace(old2,new2,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Renovar cache
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js')
+          s=p.read_text(encoding='utf-8')
+          old="const CACHE_NAME = 'recibocondo-v73-final-consistency';"
+          new="const CACHE_NAME = 'recibocondo-v74-installment-description';"
+          if s.count(old)!=1:
+              raise SystemExit(f'Cache esperado encontrado {s.count(old)} vez(es); abortando')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit final
+        run: |
+          rm -f .github/workflows/receipt-installment-description.yml
+          git config user.name 'ReciboCondo Installment Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Auto-increment installment number in receipt descriptions'
+          git push origin HEAD:fix/receipt-installment-description
