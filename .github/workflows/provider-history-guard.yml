@@ -34,7 +34,7 @@ jobs:
           from pathlib import Path
           p=Path('sw.js')
           s=p.read_text(encoding='utf-8')
-          old="const CACHE_NAME = 'recibocondo-v67-history-guard';"
+          old="const CACHE_NAME = 'recibocondo-v67-service-delete-guard';"
           new="const CACHE_NAME = 'recibocondo-v68-provider-history-guard';"
           if s.count(old)!=1:
               raise SystemExit(f'Patch abortado: cache esperado encontrado {s.count(old)} vez(es)')
