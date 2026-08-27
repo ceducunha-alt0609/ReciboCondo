@@ -23,15 +23,13 @@ jobs:
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
 
-          # 1) Blindar pagamento acima do saldo e valores invalidos.
           a=s.find("async savePayment(){")
-          b=s.find(",\n   prepareReceipt(s){", a)
+          b=s.find("prepareReceipt(s){", a)
           if a<0 or b<0 or s.count("async savePayment(){")!=1:
               raise SystemExit(f'Patch abortado em savePayment: a={a}, b={b}, count={s.count("async savePayment(){")}')
           new_save="""async savePayment(){if(this.isViewer)return;let s=this.paymentTarget,value=Number(this.payment.value||0),remaining=Math.max(0,Number(s.amount||0)-Number(s.paidValue||0));if(value<=0)return this.toast('Informe um valor de pagamento maior que zero.','warning');if(value>remaining+0.000001)return this.toast('O pagamento não pode ser maior que o saldo pendente de '+this.money(remaining)+'.','warning');let paid=Number(s.paidValue||0)+value,status=paid>=Number(s.amount)?'Pago':'Parcial';await db.services.update(s.id,{paidValue:paid,paymentDate:this.payment.date,paymentMethod:this.payment.method,status});await this.logAction('payment','Pagamento registrado',this.providerName(s.providerId)+' • '+this.money(value)+' • '+this.payment.method);this.payModal=false;await this.load();this.toast(status==='Pago'?'Pagamento registrado. Lançamento quitado.':'Pagamento parcial registrado. Saldo restante: '+this.money(Math.max(0,Number(s.amount||0)-paid)))}"""
-          s=s[:a]+new_save+s[b:]
+          s=s[:a]+new_save+","+s[b:]
 
-          # 2) Um servico pode ter varios recibos. O novo recibo cobre apenas o valor pago ainda sem recibo.
           a=s.find("prepareReceipt(s){")
           b=s.find("printReceipt(){", a)
           if a<0 or b<0 or s.count("prepareReceipt(s){")!=1 or s.count("async issueReceipt(){")!=1:
