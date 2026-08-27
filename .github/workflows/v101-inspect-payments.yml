@@ -1,4 +1,4 @@
-name: v101 inspect payment flow
+name: v104 individual payment deletion
 
 on:
   push:
@@ -10,34 +10,60 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract payment-related code
+      - name: Patch v104 safely
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-          text=Path('index.html').read_text(encoding='utf-8')
-          targets=['db.version(3)','async load()','async saveService()','async savePayment()','async issueReceipt()','async removePaymentInternal','get reportDetailRows','get yearlyPaymentRows','async backup()','async restore(ev)','async clearAllInternal()']
-          out=[]
-          for target in targets:
-              pos=text.find(target)
-              out.append('\n'+'='*90+'\nTARGET: '+target+'\n'+'='*90+'\n')
-              if pos<0:
-                  out.append('NOT FOUND\n')
-                  continue
-              start=max(0,pos-700)
-              end=min(len(text),pos+6500)
-              out.append(text[start:end])
-              out.append('\n')
-          Path('v101-payment-snippets.txt').write_text(''.join(out),encoding='utf-8')
+          p=Path('index.html')
+          text=p.read_text(encoding='utf-8')
+
+          old='@click="p.service && openDeletePaymentModal(p.service)" class="danger" :disabled="isViewer || !p.service" title="Exclui todos os pagamentos deste lançamento">Excluir todos</button>'
+          new='@click="openDeleteSinglePaymentModal(p)" class="danger" :disabled="isViewer || !p.service" title="Exclui somente este pagamento">Excluir pagamento</button>'
+          assert old in text, 'recent payment delete button anchor not found'
+          text=text.replace(old,new,1)
+
+          anchor="openDeletePaymentModal(s){if(this.isViewer)return;let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id))"
+          pos=text.find(anchor)
+          assert pos>=0, 'openDeletePaymentModal anchor not found'
+          insert="openDeleteSinglePaymentModal(p){if(this.isViewer||!p)return;let s=this.services.find(x=>Number(x.id)===Number(p.serviceId));if(!s)return this.toast('Lançamento deste pagamento não foi encontrado.','warning');let receipt=p.receiptId?this.receipts.find(r=>Number(r.id)===Number(p.receiptId)):null;this.actionModal={open:true,type:'deleteSinglePayment',tone:'danger',icon:'circle-x',target:p,service:s,title:'Excluir este pagamento',subtitle:'Remove somente esta parcela do histórico de pagamentos.',note:receipt?'Este pagamento possui o recibo nº '+(receipt.number||'-')+'. Exclua primeiro esse recibo para liberar a correção do pagamento.':'Os demais pagamentos e recibos deste lançamento serão preservados. O total pago e o status serão recalculados automaticamente.',confirmLabel:'Excluir este pagamento',details:[{label:'Prestador',value:this.providerName(p.providerId??s.providerId)},{label:'Valor',value:this.money(p.amount||0)},{label:'Data/forma',value:this.fmt(p.date)+' • '+(p.method||'não informada')},{label:'Recibo',value:receipt?('nº '+(receipt.number||'-')):'não emitido'}]};this.after()},"
+          text=text[:pos]+insert+text[pos:]
+
+          old_confirm="if(m.type==='duplicate'){await this.duplicateServiceInternal(m.service)}else if(m.type==='deleteService'){await this.removeServiceInternal(t.id)}else if(m.type==='deletePayment'){await this.removePaymentInternal(t.id)}"
+          new_confirm="if(m.type==='duplicate'){await this.duplicateServiceInternal(m.service)}else if(m.type==='deleteService'){await this.removeServiceInternal(t.id)}else if(m.type==='deleteSinglePayment'){await this.removeSinglePaymentInternal(t.id)}else if(m.type==='deletePayment'){await this.removePaymentInternal(t.id)}"
+          assert old_confirm in text, 'confirmActionModal anchor not found'
+          text=text.replace(old_confirm,new_confirm,1)
+
+          anchor2="async removePaymentInternal(id){let s=this.services.find(x=>Number(x.id)===Number(id));"
+          pos2=text.find(anchor2)
+          assert pos2>=0, 'removePaymentInternal anchor not found'
+          fn="async removeSinglePaymentInternal(id){let p=this.payments.find(x=>Number(x.id)===Number(id));if(!p)return;let s=this.services.find(x=>Number(x.id)===Number(p.serviceId));if(!s)return this.toast('Lançamento deste pagamento não foi encontrado.','warning');if(p.receiptId){let r=this.receipts.find(x=>Number(x.id)===Number(p.receiptId));return this.toast('Este pagamento possui o recibo nº '+(r?.number||p.receiptId)+'. Exclua o recibo primeiro para preservar a rastreabilidade.','warning')}let removed=Number(p.amount||0);await db.transaction('rw',db.payments,db.services,async()=>{await db.payments.delete(p.id);let remaining=await db.payments.where('serviceId').equals(s.id).toArray(),paid=remaining.reduce((a,x)=>a+Number(x.amount||0),0),latest=remaining.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.id||0)-Number(a.id||0))[0]||null,status=paid<=0?'Pendente':(paid>=Number(s.amount||0)-0.000001?'Pago':'Parcial');await db.services.update(s.id,{paidValue:paid,paymentDate:latest?.date||'',paymentMethod:latest?.method||'',status})});await this.logAction('delete','Pagamento individual excluído',this.providerName(p.providerId??s.providerId)+' • '+this.money(removed)+' • '+this.fmt(p.date));await this.load();this.toast('Pagamento de '+this.money(removed)+' excluído. Os demais registros foram preservados.')},"
+          text=text[:pos2]+fn+text[pos2:]
+
+          # Strengthen integrity audit for payment->receipt references.
+          needle="for(const p of this.payments){if(p.serviceId!=null&&!serviceIds.has(Number(p.serviceId)))issues.push('Pagamento '+(p.id||'?')+' aponta para lançamento inexistente.');if(p.providerId!=null&&!providerIds.has(Number(p.providerId)))issues.push('Pagamento '+(p.id||'?')+' aponta para prestador inexistente.')}"
+          repl=needle+"let receiptIds=new Set(this.receipts.map(r=>Number(r.id)));for(const p of this.payments){if(p.receiptId!=null&&!receiptIds.has(Number(p.receiptId)))issues.push('Pagamento '+(p.id||'?')+' aponta para recibo inexistente.');if(p.receiptId!=null){let r=this.receipts.find(x=>Number(x.id)===Number(p.receiptId));if(r&&Number(r.serviceId)!==Number(p.serviceId))issues.push('Pagamento '+(p.id||'?')+' e recibo '+(r.number||r.id||'?')+' apontam para lançamentos diferentes.')}}"
+          assert needle in text, 'integrity payment anchor not found'
+          text=text.replace(needle,repl,1)
+
+          # Guard against accidental duplicate insertion.
+          assert text.count('async removeSinglePaymentInternal(id)')==1
+          assert text.count('openDeleteSinglePaymentModal(p)')>=2
+          p.write_text(text,encoding='utf-8')
           PY
-      - name: Commit inspection output
+      - name: Verify v104 anchors
+        run: |
+          grep -q "async removeSinglePaymentInternal(id)" index.html
+          grep -q "type:'deleteSinglePayment'" index.html
+          grep -q "Exclui somente este pagamento" index.html
+          grep -q "aponta para recibo inexistente" index.html
+      - name: Commit v104
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v101-payment-snippets.txt
-          git commit -m 'Add temporary v101 payment inspection output'
+          git add index.html
+          git commit -m 'v104: allow safe individual payment deletion'
           git push
