@@ -1,0 +1,54 @@
+
+===== id="receiptPrint" @ 2225802 =====
+-to-br from-rc-800 to-rc-500'">
+              <i :data-lucide="actionModal.icon || (actionModal.tone==='danger' ? 'trash-2' : 'copy-plus')" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-black text-xl" x-text="actionModal.title"></h3>
+              <p class="text-sm text-slate-500 dark:text-slate-400" x-text="actionModal.subtitle"></p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/25 p-3 text-sm space-y-1">
+            <template x-for="d in actionModal.details" :key="d.label">
+              <p><b x-text="d.label + ':'"></b> <span x-text="d.value"></span></p>
+            </template>
+          </div>
+
+          <p class="text-xs text-slate-500 dark:text-slate-400" x-text="actionModal.note"></p>
+
+          <div class="flex gap-2">
+            <button @click="confirmActionModal" class="flex-1" :class="actionModal.tone==='danger' ? 'danger' : 'primary'" x-text="actionModal.confirmLabel"></button>
+            <button @click="closeActionModal" class="secondary">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="no-print fixed top-4 right-4 z-[80] w-[min(92vw,390px)] space-y-3 pointer-events-none">
+        <template x-for="t in toasts" :key="t.id">
+          <div x-transition.opacity.scale.origin.top.right class="pointer-events-auto rounded-3xl border bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-premium overflow-hidden" :class="t.border">
+            <div class="h-1" :class="t.bar"></div>
+            <div class="p-4 flex gap-3 items-start">
+              <div class="h-10 w-10 rounded-2xl grid place-items-center text-white shrink-0" :class="t.iconBg">
+                <i :data-lucide="t.icon" class="w-5 h-5"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="font-black text-sm text-slate-900 dark:text-white" x-text="t.title"></p>
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mt-1" x-text="t.message"></p>
+              </div>
+              <button @click="dismissToast(t.id)" class="h-8 w-8 rounded-xl grid place-items-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <section class="print-area">
+        <div id="receiptPrint" class="receipt receipt-premium" x-show="currentReceipt">
+          <div class="receipt-watermark">ReciboCondo</div>
+          <div class="pt-7 relative z-10">
+            <div class="flex justify-between gap-6 items-start border-b border-slate-300 pb-5 mb-5">
+              <div class="flex gap-4 items-center">
+                <template x-if="settings.logo"><img :src="settings.logo" class="receipt-app-logo" alt="Logotipo do condomínio"></template>
+                <template x-if="!settings.logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABOYAAATmCAIAAAAKnjl9AABhWmNhQlgAAGFaanVtYgAAAB5qdW1kYzJwYQARABCAAACqADibcQNjMnBhAAAAYTRqdW1iAAAAR2p1bWRjMm1hABEAEIAAAKoAOJtxA3VybjpjMnBhOmQ3YTMzZjMxLWY2NDUtNGY1Yy1iOWI2LTk4OGMyMmViNGI5MwAAABf9anVtYgAAAClqdW1kYzJhcwARABCAAACqADibcQNjMnBhLmFzc2VydGlvbnMAAAAJ0Wp1bWIAAAA7anVtZEDLDDK7ikidpwsq1vR/Q2kTYzJwYS5pY29uAAAAABhjMnNo2A/dmyswwG7tgNaEdgzoggAAABdiZmRiAGltYWdlL3N2Zyt4bWwAAAAJd2JpZGI8c3ZnIHdpZHRoPSI3MTYiIGhlaWdodD0iNzE2IiB2aWV3Qm94PSIwIDAgNzE2IDcxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTUwOC43NDkgMzE3LjM5OUM1MTYuNzc3IDI4Ny4zMTQgNTA4Ljk5MSAyNTMuODg0IDQ4NS4zODkgMjMwLjI4MkM0NjEuNzg4IDIwNi42ODEgNDI4LjM2IDE5OC44OTUgMzk4LjI3MyAyMDYuOTIzQzM3Ni4yMzEgMTg0LjkyOCAzNDMuMzkgMTc0Ljk1NiAzMTEuMTQ4IDE4My41OTZDMjc4LjkwNiAxOTIuMjM0IDI1NS40NSAyMTcuMjkyIDI0Ny4zNiAyNDcuMzYxQzIxNy4yOTEgMjU1LjQ1MSAxOTIuMjMzIDI3OC45MSAxODMuNTk1IDMxMS4xNDlDMTc0Ljk1NyAzNDMuMzkxIDE4NC45MjcgMzc2LjIzMiAyMDYuOTI0IDM5OC4yNzRDMTk4Ljg5NiA0MjguMzU5IDIwNi42ODMgNDYxLjc4OSAyMzAuMjg0IDQ4NS4zOTFDMjUzLjg4NSA1MDguOTkyIDI4Ny4zMTMgNTE2Ljc3OSAzMTcuNDAxIDUwOC43NUMzMzkuNDQyIDUzMC43NDUgMzcyLjI4NiA1NDAuNzE3IDQwNC41MjUgNTMyLjA3OUM0MzYuNzY3IDUyMy40NDEgNDYwLjIyMyA0OTguMzg0IDQ2OC4zMTMgNDY4LjMxNUM0OTguMzgzIDQ2MC4yMjQgNTIzLjQ0IDQzNi43NjYgNTMyLjA3OCA0MDQuNTI2QzU0MC43MTYgMzcyLjI4NSA1MzAuNzQ3IDMzOS40NDMgNTA4Ljc0OSAzMTcuNDAyVjMxNy4zOTlaTTQ3MC44OTkgMjQ0Ljc3NkM0ODYuODkyIDI2MC43NyA0OTMuNDg4IDI4Mi42MDEgNDkwLjY4NyAzMDMuNDEyTDQxNS41NzcgMjYwLjA0NkM0MTIuNDExIDI1OC4yMTggNDA4LjUwOSAyNTguMjE4IDQwNS4zNDUgMjYwLjA0NkwzMTcuNDAxIDMxMC44MlYyNzcuNTI2QzMxNy40MDEgMjc1LjE5MSAzMTguNjUyIDI3My4wMDUgMzIwLjY3NiAyNzEuODM3TDM4Ny42NDQgMjMzLjE3NEM0MTQuMTc4IDIxOC4zNTMgNDQ4LjM0NiAyMjIuMjIzIDQ3MC45MDEgMjQ0Ljc3Nkg0NzAuODk5Wk0zNTcuODM3IDMxMS4xNDRMMzk4LjI3NSAzMzQuNDkxVjM4MS4xODVMMzU3LjgzNyA0MDQuNTMyTDMxNy4zOTggMzgxLjE4NVYzMzQuNDkxTDM1Ny44MzcgMzExLjE0NFpNMjY0Ljc3NiAyNjkuNjkzQzI2NS4yMDcgMjM5LjMwNSAyODUuNjQ0IDIxMS42NDkgMzE2LjQ1MyAyMDMuMzkzQzMzOC4zIDE5Ny41NCAzNjAuNTA1IDIwMi43NDQgMzc3LjEyNyAyMTUuNTczTDMwMi4wMTQgMjU4LjkzN0MyOTguODQ4IDI2MC43NjQgMjk2Ljg5OCAyNjQuMTQ0IDI5Ni44OTggMjY3Ljc5OFYzNjkuMzQ2TDI2OC4wNjUgMzUyLjY5OUMyNjYuMDQzIDM1MS41MzEgMjY0Ljc3NiAzNDkuMzUzIDI2NC43NzYgMzQ3LjAxN1YyNjkuNjkxVjI2OS42OTNaTTIwMy4zOTEgMzE2LjQ1NEMyMDkuMjQ0IDI5NC42MDggMjI0Ljg1NCAyNzcuOTc4IDI0NC4yNzYgMjY5Ljk5OVYzNTYuNzNDMjQ0LjI3NiAzNjAuMzg0IDI0Ni4yMjYgMzYzLjc2MyAyNDkuMzkyIDM2NS41OTFMMzM3LjMzNyA0MTYuMzY1TDMwOC41MDMgNDMzLjAxM0MzMDYuNDgxIDQzNC4xODEgMzAzLjk2MSA0MzQuMTg4IDMwMS45MzkgNDMzLjAyTDIzNC45NzEgMzk0LjM1N0MyMDguODY4IDM3OC43ODkgMTk1LjEzOCAzNDcuMjYxIDIwMy4zOTEgMzE2LjQ1NFpNMjQ0Ljc3NSA0NzAuOUMyMjguNzgxIDQ1NC45MDYgMjIyLjE4NiA0MzMuMDc1IDIyNC45ODYgNDEyLjI2NEwzMDAuMDk2IDQ1NS42M0MzMDMuMjYzIDQ1Ny40NTcgMzA3LjE2NCA0NTcuNDU3IDMxMC4zMjggNDU1LjYzTDM5OC4yNzMgNDA0Ljg1NlY0MzguMTQ5QzM5OC4yNzMgNDQwLjQ4NSAzOTcuMDIyIDQ0Mi42NzEgMzk0Ljk5NyA0NDMuODM5TDMyOC4wMjkgNDgyLjUwMkMzMDEuNDk1IDQ5Ny4zMjIgMjY3LjMyNyA0OTMuNDUyIDI0NC43NzIgNDcwLjlIMjQ0Ljc3NVpNNDUwLjg5NyA0NDUuOTgyQzQ1MC40NjYgNDc2LjM3MSA0MzAuMDI5IDUwNC4wMjcgMzk5LjIyIDUxMi4yODNDMzc3LjM3MyA1MTguMTM2IDM1NS4xNjggNTEyLjkzMiAzMzguNTQ3IDUwMC4xMDJMNDEzLjY1OSA0NTYuNzM4QzQxNi44MjYgNDU0LjkxMSA0MTguNzc1IDQ1MS41MzIgNDE4Ljc3NSA0NDcuODc3VjM0Ni4zMjlMNDQ3LjYwOSAzNjIuOTc3QzQ0OS42MzEgMzY0LjE0NSA0NTAuODk3IDM2Ni4zMjMgNDUwLjg5NyAzNjguNjU5VjQ0NS45ODVWNDQ1Ljk4MlpNNTEyLjI4MiAzOTkuMjIxQzUwNi40MjkgNDIxLjA2OCA0OTAuODE5IDQzNy42OTcgNDcxLjM5NyA0NDUuNjc2VjM1OC45NDZDNDcxLjM5NyAzNTUuMjkyIDQ2OS40NDggMzUxLjkxMiA0NjYuMjgxIDM1MC4wODVMMzc4LjMzNiAyOTkuMzExTDQwNy4xNyAyODIuNjYzQzQwOS4xOTIgMjgxLjQ5NSA0MTEuNzEyIDI4MS40ODcgNDEzLjczNCAyODIuNjU1TDQ4MC43MDIgMzIxLjMxOEM1MDYuODA1IDMzNi44ODcgNTIwLjUzNiAzNjguNDE1IDUxMi4yODIgMzk5LjIyMVoiIGZpbGw9ImJsYWNrIi8+Cjwvc3ZnPgoAAAF+anVtYgAAAEFqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmFjdGlvbnMudjIAAAAAGGMyc2j81C8LvWVtdOLloxb3Z45pAAABNWNib3KhZ2FjdGlvbnODpGZhY3Rpb25sYzJwYS5jcmVhdGVkZHdoZW7AdDIwMjYtMDUtMTdUMDA6MDA6MDBabXNvZnR3YXJlQWdlbnSiZG5hbWVpZ3B0LWltYWdlZ3ZlcnNpb25jMi4wcWRpZ2l0YWxTb3VyY2VUeXBleEZodHRwOi8vY3YuaXB0Yy5vcmcvbmV3c2NvZGVzL2RpZ2l0YWxzb3VyY2V0eXBlL3RyYWluZWRBbGdvcml0aG1pY01lZGlhomZhY3Rpb25uYzJwYS5jb252ZXJ0ZWRkd2hlbsB0MjAyNi0wNS0xN1QwMDowMDowMFqiZmFjdGlvbngYYzJwYS53YXRlcm1hcmtlZC51bmJvdW5kZHdoZW7AdDIwMjYtMDUtMTdUMDA6MDA6MDBaAAALump1bWIAAABJanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5jZXJ0aWZpY2F0ZS1zdGF0dXMAAAAAGGMyc2hulPt+iqOUdgXdt8rCykUCAAALaWNib3KhaG9jc3BWYWxzgnkFhE1JSUVId29CQUtDQ0JCZ3dnZ1FVQmdrckJnRUZCUWN3QVFFRWdnUUZNSUlFQVRDQm9xSVdCQlM2TVExRVhRTUNvTXVob3Zrem9MWTlCUlpMZHhnUE1qQXlOakExTVRVeU1qSXpNVGhhTUhjd2RUQk5NQWtHQlNzT0F3SWFCUUFFRkQ1TWZJNVFDNGRzY3hXK3IyNlg2aER1bENESkJCVERzeVNXTkpPaFdlcFNHR3VlRitDcHV0YXdUQUlVVXBRbEI0RzFhb2I1TXhkNGNOYU9yZTlpR2tHQUFCZ1BNakF5TmpBMU1UVXlNakl6TVRoYW9CRVlEekl3TWpZd05USXlNakl5TXpFNFdqQUtCZ2dxaGtqT1BRUURBZ05KQURCR0FpRUE4QWtzMmhYT0dVM0JTUFM5ME1wZ21KZUtHeUl1Y3ZodEFkMHMrOGIrQlE0Q0lRRDhxZU83VWtZb3FOMlFoMThGeDFaaE9ydGFsNkZ0Q3RzYmQvWVpaM1crZ2FDQ0F3RXdnZ0w5TUlJQytUQ0NBbjZnQXdJQkFnSVVJQWU3WThPZm40N1pWZnp2MUsyajRZeXlhNmd3Q2dZSUtvWkl6ajBFQXdNd2dhY3hDekFKQmdOVkJBWVRBbFZUTVJFd0R3WURWUVFJREFoT1pYY2dXVzl5YXpFUk1BOEdBMVVFQnd3SVRtVjNJRmx2Y21zeEV6QVJCZ05WQkFvTUNsUnlkV1p2SUVsdVl5NHhGREFTQmdOVkJBc01DME5CSUVScGRtbHphVzl1TVJvd0dBWUpLb1pJaHZjTkFRa0JGZ3RqWVVCMGNuVm1ieTVoYVRFck1Da0dBMVVFQXd3aVZISjFabThnUXpKUVFTQkRiR0ZwYlNCVGFXZHVhVzVuSUVOQklDZ3lNREkxS1RBZUZ3MHlOakExTVRFd016VTBNelphRncweU5qQTJNVEF3TXpVME16WmFNSUdsTVFzd0NRWURWUVFHRXdKVlV6RVJNQThHQTFVRUNBd0lUbVYzSUZsdmNtc3hFVEFQQmdOVkJBY01DRTVsZHlCWmIzSnJNUk13RVFZRFZRUUtEQXBVY25WbWJ5QkpibU11TVJRd0VnWURWUVFMREF0RFFTQkVhWFpwYzJsdmJqRWFNQmdHQ1NxR1NJYjNEUUVKQVJZTFkyRkFkSEoxWm04dVlXa3hLVEFuQmdOVkJBTU1JRlJ5ZFdadklFTXlVRUVnVDBOVFVDQlNaWE53YjI1a1pYSWdLREl3TWpVcE1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRVhtNGw0S2RLZFJZdlBlODhrWXJDK1VXWnNnbURtQk5RNHpzZC9PNHlSSGEwRU9sODV4TVlnQlc3T0JlbktRaVlMUXBiVGpSb1M5TmtMTzV3ay8raHlhT0JoekNCaERBZEJnTlZIUTRFRmdRVXVqRU5SRjBEQXFETG9hTDVNNkMyUFFVV1MzY3dId1lEVlIwakJCZ3dGb0FVdzdNa2xqU1RvVm5xVWhocm5oZmdxYnJXc0V3d0RBWURWUjBUQVFIL0JBSXdBREFPQmdOVkhROEJBZjhFQkFNQ0I0QXdFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUhBd2t3RHdZSkt3WUJCUVVITUFFRkJBSUZBREFLQmd
