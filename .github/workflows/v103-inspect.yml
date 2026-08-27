@@ -1,0 +1,40 @@
+name: v103 inspect payment center
+on:
+  push:
+    paths:
+      - '.github/workflows/v103-inspect.yml'
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect payment center semantics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          terms=['get filteredPayments','get paymentSummary','paymentMonthFilter','filteredPayments','paymentSummary']
+          out=[]
+          for term in terms:
+              out.append(f'===== {term} =====')
+              pos=0; count=0
+              while True:
+                  i=s.find(term,pos)
+                  if i<0: break
+                  count+=1
+                  out.append(f'--- occurrence {count} @ {i} ---')
+                  out.append(s[max(0,i-900):min(len(s),i+1800)])
+                  pos=i+len(term)
+              out.append(f'COUNT={count}\n')
+          Path('tools').mkdir(exist_ok=True)
+          Path('tools/v103_inspection.txt').write_text('\n'.join(out),encoding='utf-8')
+          PY
+      - name: Commit inspection
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/v103_inspection.txt
+          git commit -m "Generate temporary v103 payment center inspection"
+          git push
