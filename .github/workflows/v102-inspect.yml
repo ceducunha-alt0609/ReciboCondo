@@ -1,0 +1,41 @@
+name: v102 inspect provider totals
+on:
+  push:
+    paths:
+      - '.github/workflows/v102-inspect.yml'
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect provider total usages
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          terms=['providerSpend(', 'providerOpen(', 'providerLastServiceLabel(']
+          out=[]
+          for term in terms:
+              out.append(f'===== {term} =====')
+              pos=0; count=0
+              while True:
+                  i=s.find(term,pos)
+                  if i<0: break
+                  count+=1
+                  out.append(f'--- occurrence {count} @ {i} ---')
+                  out.append(s[max(0,i-850):min(len(s),i+1200)])
+                  pos=i+len(term)
+              out.append(f'COUNT={count}\n')
+          Path('tools').mkdir(exist_ok=True)
+          Path('tools/v102_inspection.txt').write_text('\n'.join(out),encoding='utf-8')
+          print('\n'.join(x for x in out if x.startswith('=====') or x.startswith('COUNT=')))
+          PY
+      - name: Commit inspection
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/v102_inspection.txt
+          git commit -m "Generate temporary v102 provider totals inspection"
+          git push
