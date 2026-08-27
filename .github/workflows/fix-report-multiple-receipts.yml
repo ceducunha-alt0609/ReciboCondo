@@ -1,0 +1,67 @@
+name: Corrigir relatorio com multiplos recibos
+on:
+  push:
+    branches: [fix/report-multiple-receipts]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/report-multiple-receipts
+      - name: Detalhar relatorio por recibo
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old="get reportRows(){return this.services.filter(s=>(!this.report.from||s.serviceDate>=this.report.from)&&(!this.report.to||s.serviceDate<=this.report.to)&&(this.report.category==='todas'||s.category===this.report.category)&&(this.report.status==='todos'||s.status===this.report.status)).sort((a,b)=>{let ra=this.receipts.find(x=>Number(x.serviceId)===Number(a.id));let rb=this.receipts.find(x=>Number(x.serviceId)===Number(b.id));let na=Number(String(ra?.number||'0').replace(/\\D/g,''))||0;let nb=Number(String(rb?.number||'0').replace(/\\D/g,''))||0;return na-nb;})},\n  get reportTotals()"
+          new="get reportRows(){return this.services.filter(s=>(!this.report.from||s.serviceDate>=this.report.from)&&(!this.report.to||s.serviceDate<=this.report.to)&&(this.report.category==='todas'||s.category===this.report.category)&&(this.report.status==='todos'||s.status===this.report.status)).sort((a,b)=>{let ra=this.receipts.find(x=>Number(x.serviceId)===Number(a.id));let rb=this.receipts.find(x=>Number(x.serviceId)===Number(b.id));let na=Number(String(ra?.number||'0').replace(/\\D/g,''))||0;let nb=Number(String(rb?.number||'0').replace(/\\D/g,''))||0;return na-nb;})},\n  get reportDetailRows(){let rows=[];for(const s of this.reportRows){let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)).sort((a,b)=>(Number(String(a.number||'').replace(/\\D/g,''))||0)-(Number(String(b.number||'').replace(/\\D/g,''))||0)),issued=0;for(const r of linked){let val=Number(r.total||0);issued+=val;rows.push({...s,reportKey:'r-'+r.id,receiptNumber:r.number||'-',paymentDate:r.paymentDate||r.date||s.paymentDate,description:r.description||s.description,reportValue:val})}let unreceipted=Math.max(0,Number(s.paidValue||0)-issued);if(unreceipted>0)rows.push({...s,reportKey:'u-'+s.id,receiptNumber:'PENDENTE',paymentDate:s.paymentDate,description:s.description,reportValue:unreceipted});if(!linked.length&&unreceipted<=0)rows.push({...s,reportKey:'s-'+s.id,receiptNumber:'-',reportValue:Number(s.paidValue||0)>0?Number(s.paidValue||0):Number(s.amount||0)})}return rows},\n  get reportTotals()"
+          if s.count(old)!=1: raise SystemExit(f'bloco reportRows esperado 1x, encontrado {s.count(old)}')
+          s=s.replace(old,new,1)
+          # Tela do relatório
+          old_screen='<template x-for="s in reportRows" :key="s.id"><tr class="border-t border-slate-200/60 dark:border-slate-700/60"><td class="p-2 font-bold text-amber-700" x-text="reportReceiptNumber(s)"></td><td class="p-2" x-text="fmt(s.serviceDate)"></td><td class="p-2" x-text="fmt(s.paymentDate)"></td><td class="p-2" x-text="providerName(s.providerId)"></td><td class="p-2" x-text="s.category"></td><td class="p-2" x-text="money(s.amount)"></td><td class="p-2" x-text="money(s.paidValue||0)"></td><td class="p-2" x-text="s.status"></td></tr></template>'
+          new_screen='<template x-for="s in reportDetailRows" :key="s.reportKey"><tr class="border-t border-slate-200/60 dark:border-slate-700/60"><td class="p-2 font-bold text-amber-700" x-text="s.receiptNumber"></td><td class="p-2" x-text="fmt(s.serviceDate)"></td><td class="p-2" x-text="fmt(s.paymentDate)"></td><td class="p-2" x-text="providerName(s.providerId)"></td><td class="p-2" x-text="s.category"></td><td class="p-2" x-text="money(s.amount)"></td><td class="p-2" x-text="money(s.reportValue||0)"></td><td class="p-2" x-text="s.status"></td></tr></template>'
+          if s.count(old_screen)!=1: raise SystemExit(f'tabela tela esperada 1x, encontrado {s.count(old_screen)}')
+          s=s.replace(old_screen,new_screen,1)
+          # Cabeçalho Registros no PDF
+          old_count='x-text="reportRows.length"'
+          if s.count(old_count)<1: raise SystemExit('contador reportRows nao encontrado')
+          # Troca apenas a ocorrência do relatório impresso, identificada após "Registros" mais próxima do bloco print.
+          marker='<p class="receipt-label mt-2">Registros</p>\n                <p class="text-2xl font-black receipt-number" x-text="reportRows.length"></p>'
+          marker_new='<p class="receipt-label mt-2">Registros</p>\n                <p class="text-2xl font-black receipt-number" x-text="reportDetailRows.length"></p>'
+          if s.count(marker)!=1: raise SystemExit(f'contador PDF esperado 1x, encontrado {s.count(marker)}')
+          s=s.replace(marker,marker_new,1)
+          # Tabela do PDF
+          old_pdf='''<template x-for="s in reportRows" :key="s.id">\n                  <tr>\n                    <td class="font-bold text-slate-700" x-text="reportReceiptNumber(s)"></td>\n                    <td x-text="fmt(s.paymentDate)"></td>\n                    <td x-text="providerName(s.providerId)"></td>\n                    <td x-text="s.category"></td>\n                    <td x-text="s.description || '-'\"></td>\n                    <td class="font-bold" x-text="money(s.paidValue || s.amount)"></td>\n                  </tr>\n                </template>'''
+          new_pdf='''<template x-for="s in reportDetailRows" :key="s.reportKey">\n                  <tr>\n                    <td class="font-bold text-slate-700" x-text="s.receiptNumber"></td>\n                    <td x-text="fmt(s.paymentDate)"></td>\n                    <td x-text="providerName(s.providerId)"></td>\n                    <td x-text="s.category"></td>\n                    <td x-text="s.description || '-'\"></td>\n                    <td class="font-bold" x-text="money(s.reportValue || 0)"></td>\n                  </tr>\n                </template>'''
+          if s.count(old_pdf)!=1: raise SystemExit(f'tabela PDF esperada 1x, encontrado {s.count(old_pdf)}')
+          s=s.replace(old_pdf,new_pdf,1)
+          # CSV detalhado por recibo
+          old_csv="csv(){let rows=[['Data do serviço','Data do pagamento','Prestador','Categoria','Descrição','Valor','Pago','Status']].concat(this.reportRows.map(s=>[s.serviceDate,s.paymentDate||'',this.providerName(s.providerId),s.category,s.description,s.amount,s.paidValue||0,s.status]));"
+          new_csv="csv(){let rows=[['Recibo nº','Data do serviço','Data do pagamento','Prestador','Categoria','Descrição','Valor do serviço','Valor deste pagamento','Status']].concat(this.reportDetailRows.map(s=>[s.receiptNumber,s.serviceDate,s.paymentDate||'',this.providerName(s.providerId),s.category,s.description,s.amount,s.reportValue||0,s.status]));"
+          if s.count(old_csv)!=1: raise SystemExit(f'CSV esperado 1x, encontrado {s.count(old_csv)}')
+          s=s.replace(old_csv,new_csv,1)
+          p.write_text(s,encoding='utf-8')
+          print('relatorio detalhado por recibo aplicado')
+          PY
+      - name: Renovar cache
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('sw.js'); s=p.read_text(encoding='utf-8')
+          old="const CACHE_NAME = 'recibocondo-v75-restore-dataclone';"
+          new="const CACHE_NAME = 'recibocondo-v76-report-multiple-receipts';"
+          if s.count(old)!=1: raise SystemExit(f'cache esperado encontrado {s.count(old)} vez(es)')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Commit final
+        run: |
+          rm -f .github/workflows/inspect-report-multiple-receipts.yml .github/workflows/fix-report-multiple-receipts.yml report-inspection.txt
+          git config user.name 'ReciboCondo Report Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Detail reports by individual receipts'
+          git push origin HEAD:fix/report-multiple-receipts
