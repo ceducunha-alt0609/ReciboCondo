@@ -1,0 +1,68 @@
+name: Congelar dados do condominio no recibo
+on:
+  push:
+    branches: [audit/receipt-provider-snapshot]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/receipt-provider-snapshot
+      - name: Congelar dados textuais do condominio
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          old="manager:this.settings.manager,condoName:this.settings.condoName};"
+          new="manager:this.settings.manager,condoName:this.settings.condoName,condoCnpj:this.settings.cnpj||'',condoAddress:this.settings.address||''};"
+          if s.count(old)!=1: raise SystemExit('Objeto de recibo esperado nao encontrado exatamente uma vez')
+          s=s.replace(old,new,1)
+          a=s.find('id=\"receiptPrint\"'); b=s.find('id=\"reportPrint\"',a)
+          if a<0 or b<0: raise SystemExit('Bloco receiptPrint nao localizado')
+          sec=s[a:b]
+          repl={
+            'settings.condoName':'(currentReceipt?.condoName || settings.condoName)',
+            'settings.manager':'(currentReceipt?.manager || settings.manager)',
+            'settings.cnpj':'(currentReceipt?.condoCnpj || settings.cnpj)',
+            'settings.address':'(currentReceipt?.condoAddress || settings.address)'
+          }
+          counts={k:sec.count(k) for k in repl}
+          if counts!={'settings.condoName':4,'settings.manager':2,'settings.cnpj':2,'settings.address':1}:
+              raise SystemExit('Contagens inesperadas no template: '+repr(counts))
+          for oldv,newv in repl.items(): sec=sec.replace(oldv,newv)
+          s=s[:a]+sec+s[b:]
+          p.write_text(s)
+          print('snapshot textual aplicado')
+          PY
+      - name: Validar comportamento
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(); a=s.find('id="receiptPrint"'); b=s.find('id="reportPrint"',a); sec=s[a:b]
+          required=["condoCnpj:this.settings.cnpj||''","condoAddress:this.settings.address||''","currentReceipt?.condoName || settings.condoName","currentReceipt?.manager || settings.manager","currentReceipt?.condoCnpj || settings.cnpj","currentReceipt?.condoAddress || settings.address"]
+          miss=[x for x in required if x not in s]
+          if miss: raise SystemExit('Campos ausentes: '+repr(miss))
+          for x in ['x-text="settings.condoName"','x-text="settings.manager"','x-text="settings.cnpj"','x-text="settings.address"']:
+              if x in sec: raise SystemExit('Template ainda depende diretamente de '+x)
+          print('validacao OK')
+          PY
+      - name: Renovar cache e limpar temporarios
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('sw.js'); s=p.read_text(); m=re.search(r"const CACHE_NAME = '([^']+)';",s)
+          if not m: raise SystemExit('CACHE_NAME nao encontrado')
+          s=s[:m.start(1)]+'recibocondo-v85-receipt-condo-snapshot'+s[m.end(1):]
+          p.write_text(s)
+          PY
+          rm -f .github/workflows/inspect-receipt-provider-snapshot.yml .github/workflows/inspect-receipt-print-template.yml .github/workflows/inspect-receipt-print-fields.yml .github/workflows/inspect-receipt-condo-snapshot.yml .github/workflows/fix-receipt-condo-snapshot.yml receipt-provider-snapshot-inspection.txt receipt-print-template-inspection.txt receipt-print-fields.txt receipt-condo-snapshot.txt
+          git config user.name 'ReciboCondo Receipt Guard'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Preserve condo identity on receipt reprints'
+          git push origin HEAD:audit/receipt-provider-snapshot
