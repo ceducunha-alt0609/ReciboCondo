@@ -1,0 +1,31 @@
+name: Auditar duplicacao de lancamento
+on:
+  push:
+    branches: [audit/duplicate-service]
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          terms=['duplicateService','Duplicar','duplicar','copyService','cloneService']
+          out=[]
+          for term in terms:
+            pos=0
+            while True:
+              i=s.find(term,pos)
+              if i<0: break
+              out.append(f'===== {term} @ {i} =====\n'+s[max(0,i-1800):i+4500])
+              pos=i+len(term)
+          Path('duplicate-inspection.txt').write_text('\n\n'.join(out))
+          PY
+          git config user.name 'ReciboCondo Audit'
+          git config user.email 'actions@users.noreply.github.com'
+          git add duplicate-inspection.txt
+          git commit -m 'Inspect duplicate service flow' || exit 0
+          git push
