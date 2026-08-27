@@ -12,7 +12,7 @@ def once(old,new,label):
 
 def sub(pattern,repl,label,flags=re.S):
     global s
-    s2,n=re.subn(pattern,repl,s,count=1,flags=flags)
+    s2,n=re.subn(pattern,lambda m: repl,s,count=1,flags=flags)
     if n!=1: raise SystemExit(f'{label}: expected 1 regex match, got {n}')
     s=s2
 
