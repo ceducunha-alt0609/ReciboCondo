@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v72-partial-payment-receipts';
+const CACHE_NAME = 'recibocondo-v73-final-consistency';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
