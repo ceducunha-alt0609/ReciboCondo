@@ -1,4 +1,4 @@
-name: v121 audit ledger migration links
+name: v121 legacy receipt link migration
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,26 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture ledger migration and inverse link logic
+      - name: Link reconstructed payments back to legacy receipts
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['async ensurePaymentLedger()','paymentId:','receiptId:','db.receipts.update(','db.payments.update(','paymentsLedgerV1','auditDataIntegrity()']
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1800):i+4200])
-                  start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v121-ledger-migration-links-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old="await db.transaction('rw',db.payments,async()=>{let existing=await db.payments.where('serviceId').equals(s.id).toArray();if(existing.length)return;let rows=[],rs=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)).sort((a,b)=>Number(a.id||0)-Number(b.id||0)),known=0;for(const r of rs){let amount=Number(r.total||0);if(amount<=0)continue;rows.push({serviceId:s.id,providerId:s.providerId,date:r.paymentDate||r.date||s.paymentDate||s.serviceDate||this.today(),amount,method:r.paymentMethod||s.paymentMethod||'Não informado',receiptId:r.id,source:'receipt-migration',createdAt:new Date().toISOString()});known+=amount}let residual=Math.max(0,paid-known);if(residual>0.009)rows.push({serviceId:s.id,providerId:s.providerId,date:s.paymentDate||s.serviceDate||this.today(),amount:residual,method:s.paymentMethod||'Não informado',receiptId:null,source:'service-migration',createdAt:new Date().toISOString()});if(rows.length){await db.payments.bulkAdd(rows);created+=rows.length}})"
+          new="await db.transaction('rw',db.payments,db.receipts,async()=>{let existing=await db.payments.where('serviceId').equals(s.id).toArray();if(existing.length)return;let rows=[],rs=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)).sort((a,b)=>Number(a.id||0)-Number(b.id||0)),known=0;for(const r of rs){let amount=Number(r.total||0);if(amount<=0)continue;rows.push({serviceId:s.id,providerId:s.providerId,date:r.paymentDate||r.date||s.paymentDate||s.serviceDate||this.today(),amount,method:r.paymentMethod||s.paymentMethod||'Não informado',receiptId:r.id,source:'receipt-migration',createdAt:new Date().toISOString(),legacyReceiptId:r.id});known+=amount}let residual=Math.max(0,paid-known);if(residual>0.009)rows.push({serviceId:s.id,providerId:s.providerId,date:s.paymentDate||s.serviceDate||this.today(),amount:residual,method:s.paymentMethod||'Não informado',receiptId:null,source:'service-migration',createdAt:new Date().toISOString()});if(rows.length){for(const row of rows){let legacyReceiptId=row.legacyReceiptId;delete row.legacyReceiptId;let paymentId=await db.payments.add(row);if(legacyReceiptId!=null){let receipt=await db.receipts.get(legacyReceiptId);if(receipt&&receipt.paymentId==null)await db.receipts.update(legacyReceiptId,{paymentId})}created++}}})"
+          assert s.count(old)==1
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v121-legacy-receipt-links'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v121-ledger-migration-links-audit.txt
-          git commit -m 'v121: capture ledger migration link audit'
+          git add index.html sw.js
+          git rm .github/workflows/v121-audit-ledger-migration-links.yml v121-ledger-migration-links-audit.txt
+          git commit -m 'v121: preserve inverse links in ledger migration'
           git push
