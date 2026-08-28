@@ -1,0 +1,14 @@
+TOP_LEVEL_CALLABLES=147
+UNREFERENCED_CANDIDATES=4
+
+topProviders | getter | occurrences=1
+get topProviders(){return this.annualTopProviders}
+
+categorySummary | getter | occurrences=1
+get categorySummary(){return this.annualCategorySummary}
+
+prepareReceipt | method | occurrences=1
+prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()}
+
+reportReceiptNumber | method | occurrences=1
+reportReceiptNumber(service){let rs=this.receipts.filter(x=>Number(x.serviceId)===Number(service.id)).sort((a,b)=>Number(a.id||0)-Number(b.id||0));return rs.length?rs.map(r=>r.number).filter(Boolean).join(', '):'-';}
