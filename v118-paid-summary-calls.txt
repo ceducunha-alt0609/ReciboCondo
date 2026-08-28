@@ -1,0 +1,67 @@
+
+===== this.topProviders =====
+COUNT=0
+
+===== topProviders =====
+
+#1 at 6466113
+[id].open+=this.balance(s)});return Object.values(map).filter(x=>x.total>0||x.open>0).sort((a,b)=>b.total-a.total).slice(0,10)},
+  get annualCategorySummary(){let rows=this.yearlyPaymentRows,total=rows.reduce((a,r)=>a+Number(r.total||0),0)||1;return this.categories.map(category=>{let val=rows.filter(r=>r.category===category).reduce((a,r)=>a+Number(r.total||0),0);return{category,total:val,percent:Math.min(100,Math.round(val/total*100))}}).filter(x=>x.total>0).sort((a,b)=>b.total-a.total)},
+  get topProviders(){return this.annualTopProviders},
+  get categorySummary(){return this.annualCategorySummary},
+  get openServices(){return this.services.filter(s=>s.status!=='Pago').sort((a,b)=>String(a.dueDate).localeCompare(String(b.dueDate)))},
+  get filteredProviders(){
+    let q=(this.q||'').toLowerCase();
+    let ps=(this.providerSearch||'').toLowerCase();
+    let cat=this.providerCategoryFilter||'';
+    let list=this.providers.filter(p=>{
+      if(q&&![p.name,p.document,p.category,p.phone,p.whatsapp].join(' ').toLowerCase().includes(q))return false;
+      if(ps&&![p.name,p.document,p.category,p.phone,p.whatsapp].join(' ').toLowerCase().includes(ps))return false;
+      if(cat&&p.category!==cat)return false;
+      return true;
+    });
+    let field=this.providerSortField||'name';
+    let dir=this.providerSortDir||'asc';
+    list=[...list].sort((a,b)=>{
+      let va=field==='spend'?this
+
+#2 at 6475371
+kupStats();let d=this.backupDays();if(d===null)return'Você ainda não exportou um backup. Recomendo gerar um JSON antes de continuar cadastrando dados importantes.';if(d>15)return'Seu último backup já passou de 15 dias. Exporte um novo JSON para proteger '+s.records+' registros locais.';if(d>7)return'Backup existente, mas já vale gerar uma cópia atualizada com os últimos lançamentos e recibos.';return'Backup em dia. Mesmo assim, exporte uma nova cópia sempre antes de grandes alterações.'},
+  get topProviders(){let y=new Date().getFullYear(), map={};this.services.filter(s=>String(s.serviceDate||'').startsWith(String(y))).forEach(s=>{let id=s.providerId,p=this.providers.find(x=>Number(x.id)===Number(id))||{};if(!map[id])map[id]={id,name:p.name||'-',category:p.category||s.category,count:0,total:0,open:0};map[id].count++;map[id].total+=Number(s.paidValue||s.amount||0);map[id].open+=this.balance(s)});return Object.values(map).sort((a,b)=>b.total-a.total).slice(0,8)},
+  get categorySummary(){let total=this.services.reduce((a,s)=>a+Number(s.paidValue||s.amount||0),0)||1;return this.categories.map(category=>{let val=this.services.filter(s=>s.category===category).reduce((a,s)=>a+Number(s.paidValue||s.amount||0),0);return{category,total:val,percent:Math.min(100,Math.round(val/total*100))}}).filter(x=>x.total>0).sort((a,b)=>b.total-a.total)},
+  get criticalOpen(){return this.openServices.s
+COUNT=2
+
+===== this.categorySummary =====
+COUNT=0
+
+===== categorySummary =====
+
+#1 at 6466167
+.filter(x=>x.total>0||x.open>0).sort((a,b)=>b.total-a.total).slice(0,10)},
+  get annualCategorySummary(){let rows=this.yearlyPaymentRows,total=rows.reduce((a,r)=>a+Number(r.total||0),0)||1;return this.categories.map(category=>{let val=rows.filter(r=>r.category===category).reduce((a,r)=>a+Number(r.total||0),0);return{category,total:val,percent:Math.min(100,Math.round(val/total*100))}}).filter(x=>x.total>0).sort((a,b)=>b.total-a.total)},
+  get topProviders(){return this.annualTopProviders},
+  get categorySummary(){return this.annualCategorySummary},
+  get openServices(){return this.services.filter(s=>s.status!=='Pago').sort((a,b)=>String(a.dueDate).localeCompare(String(b.dueDate)))},
+  get filteredProviders(){
+    let q=(this.q||'').toLowerCase();
+    let ps=(this.providerSearch||'').toLowerCase();
+    let cat=this.providerCategoryFilter||'';
+    let list=this.providers.filter(p=>{
+      if(q&&![p.name,p.document,p.category,p.phone,p.whatsapp].join(' ').toLowerCase().includes(q))return false;
+      if(ps&&![p.name,p.document,p.category,p.phone,p.whatsapp].join(' ').toLowerCase().includes(ps))return false;
+      if(cat&&p.category!==cat)return false;
+      return true;
+    });
+    let field=this.providerSortField||'name';
+    let dir=this.providerSortDir||'asc';
+    list=[...list].sort((a,b)=>{
+      let va=field==='spend'?this.providerSpend(a.id):String(a[field]||'').toLowerCase(
+
+#2 at 6475853
+erações.'},
+  get topProviders(){let y=new Date().getFullYear(), map={};this.services.filter(s=>String(s.serviceDate||'').startsWith(String(y))).forEach(s=>{let id=s.providerId,p=this.providers.find(x=>Number(x.id)===Number(id))||{};if(!map[id])map[id]={id,name:p.name||'-',category:p.category||s.category,count:0,total:0,open:0};map[id].count++;map[id].total+=Number(s.paidValue||s.amount||0);map[id].open+=this.balance(s)});return Object.values(map).sort((a,b)=>b.total-a.total).slice(0,8)},
+  get categorySummary(){let total=this.services.reduce((a,s)=>a+Number(s.paidValue||s.amount||0),0)||1;return this.categories.map(category=>{let val=this.services.filter(s=>s.category===category).reduce((a,s)=>a+Number(s.paidValue||s.amount||0),0);return{category,total:val,percent:Math.min(100,Math.round(val/total*100))}}).filter(x=>x.total>0).sort((a,b)=>b.total-a.total)},
+  get criticalOpen(){return this.openServices.slice().sort((a,b)=>new Date(a.dueDate||'2999-12-31')-new Date(b.dueDate||'2999-12-31')).slice(0,8)},
+  get notifications(){const now=this.today();let pend=this.services.filter(s=>s.status!=='Pago'&&s.dueDate<=now).slice(0,3).map(s=>({id:s.id,title:'Pagamento pendente',body:this.providerName(s.providerId)+' • '+s.category+' • '+this.money(this.balance(s))}));let rec=this.recurrences.filter(r=>r.active&&!this.recurrenceGenerated(r)).slice(0,2).map(r=>({id:'r'+r.id,title:'Recorrên
+COUNT=2
