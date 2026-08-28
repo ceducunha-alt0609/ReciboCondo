@@ -1,0 +1,34 @@
+name: v110 audit partial payments
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v110-audit-partial-payments.yml'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract payment and receipt routines
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          keys=['async savePayment(','quickReceipt(','async issueReceipt(','async removeReceiptInternal(','async removeSinglePaymentInternal(','openDeleteSinglePaymentModal(','openDeletePaymentModal(','confirmActionModal()']
+          out=[]
+          for k in keys:
+              i=s.find(k)
+              out.append('\n===== '+k+' =====\n')
+              if i<0:
+                  out.append('NOT FOUND\n')
+                  continue
+              out.append(s[i:i+7000])
+          Path('v110-partial-payment-audit.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v110-partial-payment-audit.txt
+          git commit -m 'v110: capture partial payment audit snippets'
+          git push
