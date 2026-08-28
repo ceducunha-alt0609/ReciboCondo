@@ -1,4 +1,4 @@
-name: v112 service panel payment ledger retry
+name: v112 service panel ledger positional patch
 on:
   push:
     branches: [ main ]
@@ -11,23 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Make monthly recent payments ledger based
+      - name: Patch monthly payment panel safely
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           p=Path('index.html'); s=p.read_text(encoding='utf-8')
-          s,n=re.subn(r'<template x-for="s in servicePanelPaidRows\.slice\(0,5\)" :key="s\.id">\s*<div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">\s*<div><p class="font-black text-sm" x-text="providerName\(s\.providerId\)"></p><p class="text-xs text-slate-500" x-text="fmt\(s\.paymentDate\)\+' • '\+s\.category\+' • '\+\(s\.paymentMethod\|\|'forma não informada'\)"></p></div>\s*<div class="text-right"><p class="font-black text-emerald-700" x-text="money\(s\.paidValue\|\|0\)"></p><button @click="quickReceipt\(s\)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber\(s\)==='-'\?'Emitir recibo':'Ver recibo'"></button></div>\s*</div>\s*</template>', '''<template x-for="p in servicePanelPaymentEvents.slice(0,5)" :key="'panel-pay-'+p.id">
+          start=s.find('<template x-for="s in servicePanelPaidRows.slice(0,5)"')
+          assert start>=0
+          end=s.find('</template>',start); assert end>=0; end+=len('</template>')
+          block=s[start:end]
+          assert 'fmt(s.paymentDate)' in block and 'money(s.paidValue||0)' in block and 'quickReceipt(s)' in block
+          new='''<template x-for="p in servicePanelPaymentEvents.slice(0,5)" :key="'panel-pay-'+p.id">
                     <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
                       <div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.date)+' • '+(p.service?.category||'Sem categoria')+' • '+(p.method||'forma não informada')"></p></div>
                       <div class="text-right"><p class="font-black text-emerald-700" x-text="money(p.amount||0)"></p><button @click="p.service && quickReceipt(p.service)" class="mini" :disabled="isViewer || !p.service" x-text="p.receiptId?'Ver recibo':'Emitir recibo'"></button></div>
                     </div>
-                  </template>''',s,count=1)
-          assert n==1, f'template replacements={n}'
-          old='x-show="!servicePanelPaidRows.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>'
-          assert old in s; s=s.replace(old,'x-show="!servicePanelPaymentEvents.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>',1)
-          marker='get servicePanelPaidRows(){'
-          i=s.find(marker); assert i>=0
+                  </template>'''
+          s=s[:start]+new+s[end:]
+          empty=s.find('x-show="!servicePanelPaidRows.length"',start); assert empty>=0
+          s=s[:empty]+s[empty:].replace('x-show="!servicePanelPaidRows.length"','x-show="!servicePanelPaymentEvents.length"',1)
+          marker='get servicePanelPaidRows(){'; i=s.find(marker); assert i>=0
           nxt=s.find('\n      get ',i+len(marker)); assert nxt>=0
           getter="\n      get servicePanelPaymentEvents(){let ref=this.servicePanelMonth;return this.payments.map(p=>({...p,service:this.services.find(s=>s.id==p.serviceId)})).filter(p=>p.date&&p.date.slice(0,7)===ref).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||Number(b.id||0)-Number(a.id||0))},"
           s=s[:nxt]+getter+s[nxt:]
