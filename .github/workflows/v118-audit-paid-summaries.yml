@@ -1,4 +1,4 @@
-name: v118 audit paid summaries
+name: v118 inspect paid summary call sites
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,30 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture paid summary semantics
+      - name: Capture concise call sites
         run: |
           python - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text(encoding='utf-8')
-          terms=['paidValue||s.amount','paidValue || s.amount','topProviders','categorySummary','annualTopProviders','annualCategorySummary','Maior categoria','Top recebimentos']
           out=[]
-          for term in terms:
+          for term in ['this.topProviders','topProviders','this.categorySummary','categorySummary']:
               out.append('\n===== '+term+' =====\n')
               start=0;n=0
               while True:
                   i=s.find(term,start)
                   if i<0: break
                   n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1600):i+4200])
+                  out.append(f'\n#{n} at {i}\n'+s[max(0,i-500):i+900]+'\n')
                   start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v118-paid-summaries-audit.txt').write_text(''.join(out),encoding='utf-8')
+              out.append('COUNT='+str(n)+'\n')
+          Path('v118-paid-summary-calls.txt').write_text(''.join(out),encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v118-paid-summaries-audit.txt
-          git commit -m 'v118: capture paid summary semantics audit'
+          git add v118-paid-summary-calls.txt
+          git commit -m 'v118: capture paid summary call sites'
           git push
