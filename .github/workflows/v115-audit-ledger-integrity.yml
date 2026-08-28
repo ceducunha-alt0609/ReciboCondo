@@ -1,4 +1,4 @@
-name: v115 audit ledger integrity
+name: v115 strengthen ledger integrity
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,32 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture integrity audit implementation
+      - name: Add cross-link ledger integrity checks
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['runIntegrityAudit(','integrityAudit','Auditoria de integridade','receiptId','paymentId']
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1800):i+5200])
-                  start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v115-ledger-integrity-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old="for(const p of this.payments){if(p.serviceId!=null&&!serviceIds.has(Number(p.serviceId)))issues.push('Pagamento '+(p.id||'?')+' aponta para lançamento inexistente.');if(p.providerId!=null&&!providerIds.has(Number(p.providerId)))issues.push('Pagamento '+(p.id||'?')+' aponta para prestador inexistente.')}let receiptIds=new Set(this.receipts.map(r=>Number(r.id)));for(const p of this.payments){if(p.receiptId!=null&&!receiptIds.has(Number(p.receiptId)))issues.push('Pagamento '+(p.id||'?')+' aponta para recibo inexistente.');if(p.receiptId!=null){let r=this.receipts.find(x=>Number(x.id)===Number(p.receiptId));if(r&&Number(r.serviceId)!==Number(p.serviceId))issues.push('Pagamento '+(p.id||'?')+' e recibo '+(r.number||r.id||'?')+' apontam para lançamentos diferentes.')}}let seen=new Set();"
+          new="for(const p of this.payments){if(p.serviceId!=null&&!serviceIds.has(Number(p.serviceId)))issues.push('Pagamento '+(p.id||'?')+' aponta para lançamento inexistente.');if(p.providerId!=null&&!providerIds.has(Number(p.providerId)))issues.push('Pagamento '+(p.id||'?')+' aponta para prestador inexistente.');if(Number(p.amount||0)<=0)issues.push('Pagamento '+(p.id||'?')+' possui valor inválido: '+this.money(Number(p.amount||0))+'.');let svc=this.services.find(s=>Number(s.id)===Number(p.serviceId));if(svc&&p.providerId!=null&&Number(p.providerId)!==Number(svc.providerId))issues.push('Pagamento '+(p.id||'?')+' aponta para prestador diferente do lançamento '+(svc.id||'?')+'.')}let receiptIds=new Set(this.receipts.map(r=>Number(r.id))),paymentIds=new Set(this.payments.map(p=>Number(p.id))),usedReceiptIds=new Set(),usedPaymentIds=new Set();for(const p of this.payments){if(p.receiptId!=null&&!receiptIds.has(Number(p.receiptId)))issues.push('Pagamento '+(p.id||'?')+' aponta para recibo inexistente.');if(p.receiptId!=null){let rid=Number(p.receiptId);if(usedReceiptIds.has(rid))issues.push('Mais de um pagamento aponta para o mesmo recibo ID '+rid+'.');usedReceiptIds.add(rid);let r=this.receipts.find(x=>Number(x.id)===rid);if(r&&Number(r.serviceId)!==Number(p.serviceId))issues.push('Pagamento '+(p.id||'?')+' e recibo '+(r.number||r.id||'?')+' apontam para lançamentos diferentes.');if(r&&r.paymentId!=null&&Number(r.paymentId)!==Number(p.id))issues.push('Pagamento '+(p.id||'?')+' e recibo '+(r.number||r.id||'?')+' discordam no vínculo da parcela.')}}for(const r of this.receipts){if(r.paymentId!=null){let pid=Number(r.paymentId);if(!paymentIds.has(pid))issues.push('Recibo '+(r.number||r.id||'?')+' aponta para pagamento inexistente.');if(usedPaymentIds.has(pid))issues.push('Mais de um recibo aponta para o mesmo pagamento ID '+pid+'.');usedPaymentIds.add(pid);let pay=this.payments.find(p=>Number(p.id)===pid);if(pay&&Number(pay.serviceId)!==Number(r.serviceId))issues.push('Recibo '+(r.number||r.id||'?')+' e pagamento '+(pay.id||'?')+' apontam para lançamentos diferentes.');if(pay&&pay.receiptId!=null&&Number(pay.receiptId)!==Number(r.id))issues.push('Recibo '+(r.number||r.id||'?')+' e pagamento '+(pay.id||'?')+' discordam no vínculo do recibo.')}let svc=this.services.find(s=>Number(s.id)===Number(r.serviceId));if(svc&&r.providerId!=null&&Number(r.providerId)!==Number(svc.providerId))issues.push('Recibo '+(r.number||r.id||'?')+' aponta para prestador diferente do lançamento '+(svc.id||'?')+'.')}let seen=new Set();"
+          assert s.count(old)==1, f'integrity anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+          assert 'Mais de um pagamento aponta para o mesmo recibo ID' in s
+          assert 'aponta para pagamento inexistente' in s
+          assert 'possui valor inválido' in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8')
+          w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v115-ledger-integrity-guard'",w,count=1)
+          assert n==1
+          sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v115-ledger-integrity-audit.txt
-          git commit -m 'v115: capture ledger integrity audit'
+          git add index.html sw.js
+          git rm .github/workflows/v115-audit-ledger-integrity.yml v115-ledger-integrity-audit.txt
+          git commit -m 'v115: strengthen payment ledger integrity audit'
           git push
