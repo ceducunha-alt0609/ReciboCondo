@@ -1,4 +1,4 @@
-name: v112 audit legacy payment summary
+name: v112 service panel payment ledger
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,45 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture remaining legacy payment summary usages
+      - name: Make monthly recent payments ledger based
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['.paymentDate','.paymentMethod','.paidValue','openDeletePaymentModal(','reportReceiptNumber(']
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0; n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-700):i+1200])
-                  start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v112-legacy-summary-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old='''<template x-for="s in servicePanelPaidRows.slice(0,5)" :key="s.id">
+                    <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
+                      <div><p class="font-black text-sm" x-text="providerName(s.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(s.paymentDate)+' • '+s.category+' • '+(s.paymentMethod||'forma não informada')"></p></div>
+                      <div class="text-right"><p class="font-black text-emerald-700" x-text="money(s.paidValue||0)"></p><button @click="quickReceipt(s)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></button></div>
+                    </div>
+                  </template>'''
+          new='''<template x-for="p in servicePanelPaymentEvents.slice(0,5)" :key="'panel-pay-'+p.id">
+                    <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
+                      <div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.date)+' • '+(p.service?.category||'Sem categoria')+' • '+(p.method||'forma não informada')"></p></div>
+                      <div class="text-right"><p class="font-black text-emerald-700" x-text="money(p.amount||0)"></p><button @click="p.service && quickReceipt(p.service)" class="mini" :disabled="isViewer || !p.service" x-text="p.receiptId?'Ver recibo':'Emitir recibo'"></button></div>
+                    </div>
+                  </template>'''
+          assert s.count(old)==1, f'panel template count={s.count(old)}'
+          s=s.replace(old,new,1)
+          s=s.replace('x-show="!servicePanelPaidRows.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>','x-show="!servicePanelPaymentEvents.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>',1)
+          anchor='get servicePanelPaidRows(){'
+          i=s.find(anchor); assert i>=0
+          j=s.find('},',i); assert j>=0
+          insert="\n      get servicePanelPaymentEvents(){let ref=this.servicePanelMonth;return this.payments.map(p=>({...p,service:this.services.find(s=>s.id==p.serviceId)})).filter(p=>p.date&&p.date.slice(0,7)===ref).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||Number(b.id||0)-Number(a.id||0))},"
+          s=s[:j+2]+insert+s[j+2:]
+          assert 'servicePanelPaymentEvents' in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8')
+          w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v112-monthly-payment-ledger'",w,count=1); assert n==1
+          sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v112-legacy-summary-audit.txt
-          git commit -m 'v112: capture legacy payment summary audit'
+          git add index.html sw.js
+          git rm .github/workflows/v112-audit-legacy-summary.yml v112-legacy-summary-audit.txt
+          git commit -m 'v112: show monthly payments from ledger'
           git push
