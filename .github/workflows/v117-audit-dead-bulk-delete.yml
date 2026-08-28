@@ -1,4 +1,4 @@
-name: v117 audit dead bulk delete
+name: v117 remove dead bulk delete
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,53 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture all bulk delete references
+      - name: Remove orphaned bulk payment deletion code
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['removePaymentInternal(','openDeletePaymentModal(','deletePayment',"type:'deletePayment'",'excluirPagamento']
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1200):i+2600])
-                  start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v117-dead-bulk-delete-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          def remove_func(src, marker):
+              start=src.find(marker); assert start>=0, marker
+              brace=src.find('{',start); assert brace>=0
+              depth=0; quote=None; esc=False; end=None
+              for i in range(brace,len(src)):
+                  ch=src[i]
+                  if quote:
+                      if esc: esc=False
+                      elif ch=='\\': esc=True
+                      elif ch==quote: quote=None
+                      continue
+                  if ch in "'\"`": quote=ch; continue
+                  if ch=='{': depth+=1
+                  elif ch=='}':
+                      depth-=1
+                      if depth==0:
+                          end=i+1; break
+              assert end, marker+' end'
+              if end<len(src) and src[end]==',': end+=1
+              return src[:start]+src[end:]
+          assert s.count('openDeletePaymentModal(')==1
+          assert s.count('removePaymentInternal(')==2
+          assert s.count("m.type==='deletePayment'")==1
+          s=remove_func(s,'openDeletePaymentModal(s){')
+          branch="else if(m.type==='deletePayment'){await this.removePaymentInternal(t.id)}"
+          assert s.count(branch)==1; s=s.replace(branch,'',1)
+          s=remove_func(s,'async removePaymentInternal(id){')
+          assert 'openDeletePaymentModal(' not in s
+          assert 'removePaymentInternal(' not in s
+          assert "m.type==='deletePayment'" not in s
+          assert 'openDeleteSinglePaymentModal(' in s and 'removeSinglePaymentInternal(' in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v117-remove-bulk-delete'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v117-dead-bulk-delete-audit.txt
-          git commit -m 'v117: capture dead bulk delete audit'
+          git add index.html sw.js
+          git rm .github/workflows/v117-audit-dead-bulk-delete.yml v117-dead-bulk-delete-audit.txt
+          git commit -m 'v117: remove orphaned bulk payment deletion'
           git push
