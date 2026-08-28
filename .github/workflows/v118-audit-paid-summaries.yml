@@ -1,4 +1,4 @@
-name: v118 inspect paid summary call sites
+name: v118 remove duplicate paid summaries
 on:
   push:
     branches: [ main ]
@@ -7,30 +7,30 @@ on:
 permissions:
   contents: write
 jobs:
-  inspect:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture concise call sites
+      - name: Remove later legacy getter overrides
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          out=[]
-          for term in ['this.topProviders','topProviders','this.categorySummary','categorySummary']:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'\n#{n} at {i}\n'+s[max(0,i-500):i+900]+'\n')
-                  start=i+len(term)
-              out.append('COUNT='+str(n)+'\n')
-          Path('v118-paid-summary-calls.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old_top="get topProviders(){let y=new Date().getFullYear(), map={};this.services.filter(s=>String(s.serviceDate||'').startsWith(String(y))).forEach(s=>{let id=s.providerId,p=this.providers.find(x=>Number(x.id)===Number(id))||{};if(!map[id])map[id]={id,name:p.name||'-',category:p.category||s.category,count:0,total:0,open:0};map[id].count++;map[id].total+=Number(s.paidValue||s.amount||0);map[id].open+=this.balance(s)});return Object.values(map).sort((a,b)=>b.total-a.total).slice(0,8)},"
+          old_cat="get categorySummary(){let total=this.services.reduce((a,s)=>a+Number(s.paidValue||s.amount||0),0)||1;return this.categories.map(category=>{let val=this.services.filter(s=>s.category===category).reduce((a,s)=>a+Number(s.paidValue||s.amount||0),0);return{category,total:val,percent:Math.min(100,Math.round(val/total*100))}}).filter(x=>x.total>0).sort((a,b)=>b.total-a.total)},"
+          assert s.count(old_top)==1, s.count(old_top)
+          assert s.count(old_cat)==1, s.count(old_cat)
+          s=s.replace(old_top,'',1).replace(old_cat,'',1)
+          assert s.count('get topProviders(){return this.annualTopProviders}')==1
+          assert s.count('get categorySummary(){return this.annualCategorySummary}')==1
+          assert 'paidValue||s.amount' not in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v118-ledger-paid-summaries'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v118-paid-summary-calls.txt
-          git commit -m 'v118: capture paid summary call sites'
+          git add index.html sw.js
+          git rm .github/workflows/v118-audit-paid-summaries.yml v118-paid-summaries-audit.txt v118-paid-summary-calls.txt
+          git commit -m 'v118: remove legacy paid summary overrides'
           git push
