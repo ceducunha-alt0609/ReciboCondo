@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v117-remove-bulk-delete';
+const CACHE_NAME = 'recibocondo-v118-ledger-paid-summaries';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
