@@ -1,4 +1,4 @@
-name: v134 refine receipt eligibility
+name: v134 trace receipt payment id
 on:
   push:
     branches: [ main ]
@@ -11,21 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture exact receipt functions
+      - name: Trace payment event ids into receipt issuance
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           s=Path('index.html').read_text(encoding='utf-8')
+          terms=['recentPaymentReceipt(','servicePanelPaymentEvents','recentPayments','paymentEvents','issueReceipt(p.id)','@click="recentPaymentReceipt','receiptPaymentIds']
           out=[]
-          for name,next_name in [('async quickReceipt(s){','async issueReceipt('),('async issueReceipt(','async removeReceiptInternal(')]:
-              i=s.index(name)
-              j=s.find(next_name,i+len(name))
-              if j<0:j=i+7000
-              out.append('\n=== '+name+' ===\n'+s[i:j]+'\n')
+          for term in terms:
+              poss=[m.start() for m in re.finditer(re.escape(term),s)]
+              out.append(f'\n=== {term} count={len(poss)} ===\n')
+              for i in poss[:20]: out.append(s[max(0,i-1800):i+2600]+'\n---\n')
           Path('v134-future-receipt-audit.txt').write_text(''.join(out),encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add v134-future-receipt-audit.txt
-          git commit -m 'v134: refine receipt eligibility audit'
+          git commit -m 'v134: trace receipt payment id flow'
           git push
