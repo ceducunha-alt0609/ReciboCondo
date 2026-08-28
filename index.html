@@ -1206,6 +1206,23 @@ padding:2px!important;
             <button class="primary">Salvar configurações</button>
           </form>
 
+          <div class="glass rounded-3xl p-4 space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-500 text-white grid place-items-center shadow-soft"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+              <div>
+                <h3 class="font-black text-lg">Integridade dos dados</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Verificação automática de vínculos entre prestadores, lançamentos, pagamentos, recibos e sequência.</p>
+              </div>
+            </div>
+            <div x-show="!integrityIssues.length" class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-700 font-bold">Integridade OK — nenhum alerta encontrado.</div>
+            <div x-show="integrityIssues.length" class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 space-y-2">
+              <p class="text-sm font-black text-amber-800" x-text="integrityIssues.length+' alerta(s) encontrado(s). Nenhum dado foi alterado automaticamente.'"></p>
+              <ul class="space-y-1 text-sm text-amber-900">
+                <template x-for="(issue,idx) in integrityIssues" :key="'integrity-'+idx"><li class="flex gap-2"><span class="font-black">•</span><span x-text="issue"></span></li></template>
+              </ul>
+            </div>
+          </div>
+
 
           <div class="glass rounded-3xl p-4 space-y-4">
             <div class="flex items-start justify-between gap-3">
@@ -1662,7 +1679,7 @@ function localDateKey(d=new Date()){let y=d.getFullYear(),m=String(d.getMonth()+
   auth:{logged:false,role:'viewer'},login:{role:'admin',password:''},dark:localStorage.getItem('rc_dark')==='1',view:'dashboard',q:'',charts:{},selectedProviderId:null,activeTooltip:null,
   menu:[{id:'dashboard',label:'Início',icon:'layout-dashboard'},{id:'prestadores',label:'Prestadores',icon:'users'},{id:'servicos',label:'Serviços',icon:'hard-hat'},{id:'pagamentos',label:'Pagamentos',icon:'wallet-cards'},{id:'recibos',label:'Recibos',icon:'receipt-text'},{id:'relatorios',label:'Relatórios',icon:'file-bar-chart'},{id:'config',label:'Config.',icon:'settings'}],
   categories:['Jardineiro','Vidraceiro','Serralheiro','Eletricista','Pedreiro','Paisagista','Pintor','Encanador','Limpeza','Dedetização','Manutenção de bomba','Portão/Interfone','Gratificação natalina','Outros'],
-  providers:[],services:[],receipts:[],recurrences:[],payments:[],logs:[],receiptSeqValue:0,receiptSeqInput:"",settings:{condoName:'',cnpj:'',address:'',manager:'',logo:''},
+  providers:[],services:[],receipts:[],recurrences:[],payments:[],logs:[],integrityIssues:[],receiptSeqValue:0,receiptSeqInput:"",settings:{condoName:'',cnpj:'',address:'',manager:'',logo:''},
   providerForm:{id:null,name:'',type:'Autônomo',document:'',category:'Jardineiro',phone:'',whatsapp:'',pix:'',notes:''},providerSearch:'',providerCategoryFilter:'',providerSortField:'name',providerSortDir:'asc',
   serviceForm:{providerId:'',category:'Jardineiro',reference:localMonthKey(),serviceDate:localDateKey(),dueDate:localDateKey(),amount:0,location:'',description:'',paymentDate:'',paymentMethod:'',paidValue:0},
   recurrenceForm:{id:null,providerId:'',category:'Jardineiro',amount:0,dueDay:5,paymentDay:5,paymentMethod:'PIX',location:'',description:'',active:true},
