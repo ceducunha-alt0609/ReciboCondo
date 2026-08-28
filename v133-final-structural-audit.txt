@@ -1,27 +1,10 @@
-<input x-model="providerForm.pix" class="input mt-1" placeholder="PIX, banco, agência, conta..."></label>
-            </div>
+HEADINGS_BEFORE:
+Cadastro de prestador
 
-            <label><span class="text-sm font-bold">Observações</span><textarea x-model="providerForm.notes" class="input mt-1 min-h-[86px]" placeholder="Observações sobre disponibilidade, especialidade, garantia, indicação, restrições de acesso..."></textarea></label>
-          </form>
+Últimos serviços
 
-          <div x-show="selectedProvider" x-transition class="glass rounded-3xl p-4 md:p-5 overflow-hidden">
-            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 mb-4">
-              <div>
-                <p class="text-xs uppercase tracking-[.22em] text-amber-600 dark:text-amber-300 font-black">Painel do prestador</p>
-                <h3 class="font-black text-xl" x-text="selectedProvider?.name"></h3>
-                <p class="text-sm text-slate-500 dark:text-slate-400"><span x-text="selectedProvider?.category"></span> • <span x-text="selectedProvider?.type"></span> • <span x-text="selectedProvider?.document || 'sem documento'"></span></p>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                <button @click="fillServiceFromProvider(selectedProvider)" class="primary" :disabled="isViewer">Lançar serviço</button>
-                <button @click="openWhatsapp(selectedProvider)" class="secondary">WhatsApp</button>
-                <button @click="selectedProviderId=null" class="secondary">Fechar painel</button>
-              </div>
-            </div>
-
-            <div class="grid md:grid-cols-5 gap-3 mb-4">
-    <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Total lançado</p><b class="text-lg" x-text="money(providerSpend(selectedProvider?.id))"></b></div>
-    <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Pago</p><b class="text-lg text-emerald-700" x-text="money(providerPaid(selectedProvider?.id))"></b></div>
-    <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Em aberto</p><b class="text-lg text-red-600" x-text="money(providerOpen(selectedProvider?.id))"></b></div>
+CARD_CONTEXT:
+ext-lg text-red-600" x-text="money(providerOpen(selectedProvider?.id))"></b></div>
     <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Serviços</p><b class="text-lg" x-text="providerServices(selectedProvider?.id).length"></b></div>
     <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Recibos</p><b class="text-lg text-amber-700" x-text="providerReceipts(selectedProvider?.id).length"></b></div>
   </div>
@@ -59,42 +42,4 @@
                 </div>
                 <div class="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
                   <p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black mb-2">Recibos recentes</p>
-                  <template x-for="r in providerReceipts(selectedProvider?.id).slice(0,3)" :key="r.id">
-                    <p class="text-sm flex justify-between gap-2"><span> Nº <b class="text-amber-700" x-text="r.number"></b></span><b x-text="money(r.total)"></b></p>
-                  </template>
-                  <p x-show="!providerReceipts(selectedProvider?.id).length" class="text-sm text-slate-500">Nenhum recibo emitido.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="glass rounded-3xl p-4 md:p-5 overflow-hidden">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
-              <div>
-                <p class="text-xs uppercase tracking-[.22em] text-slate-500 font-black">Base cadastrada</p>
-                <h3 class="font-black text-xl">Prestadores cadastrados</h3>
-                <p class="text-sm text-slate-500 dark:text-slate-400">Lista abaixo do cadastro para leitura mais limpa e menos apertada.</p>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                <span class="badge" x-text="providers.length+' registros'"></span>
-                <span class="badge" x-text="filteredProviders.length+' visíveis'"></span>
-              </div>
-            </div>
-
-            <div class="flex flex-wrap gap-2 mb-3">
-              <input x-model="providerSearch" type="text" class="input flex-1 min-w-[180px]" placeholder="Buscar por nome, categoria, documento...">
-              <select x-model="providerCategoryFilter" class="input w-auto">
-                <option value="">Todas as categorias</option>
-                <template x-for="c in categories"><option x-text="c"></option></template>
-              </select>
-              <button @click="providerSearch='';providerCategoryFilter=''" class="secondary px-3" x-show="providerSearch||providerCategoryFilter">Limpar</button>
-            </div>
-            <div class="overflow-auto scrollbar rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
-              <table class="w-full text-sm">
-                <thead class="text-left text-slate-500 bg-slate-50/80 dark:bg-slate-900/50 sticky top-0 z-10">
-                  <tr>
-                    <th class="p-3 cursor-pointer select-none hover:text-rc-800 transition" @click="providerSortBy('name')">
-                      Prestador <span x-text="providerSortField==='name'?(providerSortDir==='asc'?'↑':'↓'):''"></span>
-                    </th>
-                    <th class="p-3 cursor-pointer select-none hover:text-rc-800 transition" @click="providerSortBy('category')">
-                      Categoria <span x-text="providerSortField==='category'?(providerSortDir==='a
+                  <template x-for="r i
