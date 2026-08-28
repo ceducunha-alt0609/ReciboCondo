@@ -1,4 +1,4 @@
-name: v114 audit payment deletion
+name: v114 safe payment deletion
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,36 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture payment deletion routines and UI
+      - name: Remove bulk payment deletion from aggregate UI
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['openDeletePaymentModal(','removePaymentInternal(','openDeleteSinglePaymentModal(','removeSinglePaymentInternal(','excluirPagamento','deletePaymentModal','deleteSinglePaymentModal']
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1800):i+4200])
-                  start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v114-payment-delete-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old='<option value="servico">Abrir serviço</option><option value="excluirPagamento" :disabled="isViewer || Number(s.paidValue||0)<=0">Excluir pagamento</option>'
+          assert s.count(old)==1, f'aggregate delete option count={s.count(old)}'
+          s=s.replace(old,'<option value="servico">Abrir serviço</option>',1)
+          old_branch="else if(action==='servico')this.openSearchService(s);else if(action==='excluirPagamento'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.openDeletePaymentModal(s)}"
+          assert s.count(old_branch)==1, f'paymentAction branch count={s.count(old_branch)}'
+          s=s.replace(old_branch,"else if(action==='servico')this.openSearchService(s)",1)
+          # Individual payment deletion must remain available.
+          assert 'openDeleteSinglePaymentModal(p)' in s
+          assert 'removeSinglePaymentInternal(id)' in s
+          assert 'Excluir este pagamento' in s
+          assert 'value="excluirPagamento"' not in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8')
+          w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v114-safe-individual-payment-delete'",w,count=1)
+          assert n==1
+          sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v114-payment-delete-audit.txt
-          git commit -m 'v114: capture payment deletion audit'
+          git add index.html sw.js
+          git rm .github/workflows/v114-audit-payment-delete.yml v114-payment-delete-audit.txt
+          git commit -m 'v114: remove bulk payment delete from aggregate view'
           git push
