@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v131-restore-link-validation';
+const CACHE_NAME = 'recibocondo-v132-unused-member-cleanup';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
