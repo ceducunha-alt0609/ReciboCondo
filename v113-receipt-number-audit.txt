@@ -1,0 +1,481 @@
+
+===== reportReceiptNumber( =====
+
+--- occurrence 1 at 2187863 ---
+thead class="text-left text-slate-500"><tr><th class="p-2">Prestador</th><th class="p-2">Serviço</th><th class="p-2">Valor</th><th class="p-2">Status</th><th class="p-2">Ações</th></tr></thead><tbody><template x-for="s in filteredServices" :key="s.id"><tr class="border-t border-slate-200/60 dark:border-slate-700/60"><td class="p-2"><b x-text="providerName(s.providerId)"></b><br><span class="text-xs text-slate-500" x-text="month(s.reference)+' • '+fmt(s.serviceDate)"></span></td><td class="p-2"><span class="badge" x-text="s.category"></span><br><span class="text-xs" x-text="s.description"></span></td><td class="p-2"><b x-text="money(s.amount)"></b><br><span class="text-xs text-slate-500" x-text="'Pago: '+money(s.paidValue||0)"></span><br><span class="text-xs text-slate-500" x-show="s.paymentDate" x-text="fmt(s.paymentDate)+' • '+(s.paymentMethod||'forma não informada')"></span></td><td class="p-2"><span class="badge" :class="statusClass(s.status)" x-text="s.status"></span><br><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="overdueLabel(s)"></span></td><td class="p-2 min-w-[150px]"><select class="input py-2 text-xs font-black" @change="serviceAction($event.target.value,s); $event.target.value=''"><option value="">Ações</option><option value="pagar" :disabled="isViewer">Pagar</option><option value="recibo" :disabled="isViewer || Number(s.paidValue||0)<=0" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></option><option value="duplicar" :disabled="isViewer">Duplicar</option><option value="excluir" :disabled="isViewer">Excluir</option></select></td></tr></template></tbody></table></div></div>
+        </section>
+
+
+        <section x-show="view==='pagamentos'" class="space-y-4">
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.22em] text-rc-gold font-black">Central financeira</p>
+                <h3 class="font-black text-xl">Pagamentos</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Esta guia puxa os lançamentos de Serviços. O pagamento continua sendo registrado pela janela flutuante, sem duplicar dados.</p>
+              </div>
+              <div class="grid sm:grid-cols-3 gap-2 lg:min-w-[620px]">
+                <input x-model="paymentMonthFilter" type="month" class="input">
+                <select x-model="paymentStatusFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select>
+                <select x-model="paymentProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-2 xl:grid-cols-6 gap-3">
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Previsto</p><p class="text-xl font-black text-rc-800 dark:text-white" x-text="money(paymentSummary.expected)"></p><p class="text-xs text-slate-500" x-text="filteredPayments.length+' lançamento(s)'"></p></div>
+              <div class="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-emerald-700 font-black">Pago</p><p class="text-xl font-black text-emerald-700" x-text="money(paymentSummary.paid)"></p><p class="text-xs text-emerald-700/80" x-text="paymentSummary.paidCount+' pagamento(s)'"></p></div>
+              <div class="rounded-3xl border border-red-500/20 bg-red-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-red-700 font-black">Em aberto</p><p class="text-xl font-black text-red-700" x-text="money(paymentSummary.open)"></p><p class="text-xs text-red-700/80">pendente/parcial</p></div>
+              <div class="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-amber-700 font-black">Vencidos</p><p class="text-xl font-black text-amber-700" x-text="paymentSummary.overdue"></p><p class="text-xs text-amber-700/80">fora do prazo</p></div>
+              <div class="rounded-3xl border border-blue-500/20 bg-blue-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-blue-700 font-black">Vence hoje</p><p class="text-xl font-black text-blue-700" x-text="paymentSummary.tod
+--- occurrence 2 at 2193996 ---
+            <td class="p-3 min-w-[120px]"><b x-text="fmt(s.dueDate)"></b><br><span class="text-xs text-slate-500" x-text="month(s.reference)"></span></td>
+                        <td class="p-3 min-w-[260px]"><b x-text="providerName(s.providerId)"></b><br><span class="badge" x-text="s.category"></span><p class="text-xs text-slate-500 mt-1" x-text="s.description||'-'"></p></td>
+                        <td class="p-3 min-w-[160px]"><b x-text="money(s.amount)"></b><br><span class="text-xs text-emerald-700" x-text="'Pago: '+money(s.paidValue||0)"></span><br><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="'Aberto: '+money(balance(s))"></span></td>
+                        <td class="p-3 min-w-[150px]"><span class="badge" :class="statusClass(s.status)" x-text="s.status"></span><br><span class="text-xs text-slate-500" x-show="s.paymentDate" x-text="fmt(s.paymentDate)+' • '+(s.paymentMethod||'forma não informada')"></span><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="overdueLabel(s)"></span></td>
+                        <td class="p-3 min-w-[150px]"><select class="input py-2 text-xs font-black" @change="paymentAction($event.target.value,s); $event.target.value=''"><option value="">Ações</option><option value="pagar" :disabled="isViewer || s.status==='Pago'">Pagar</option><option value="recibo" :disabled="isViewer || Number(s.paidValue||0)<=0" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></option><option value="servico">Abrir serviço</option><option value="excluirPagamento" :disabled="isViewer || Number(s.paidValue||0)<=0">Excluir pagamento</option></select></td>
+                      </tr>
+                    </template>
+                    <tr x-show="!filteredPayments.length"><td colspan="5" class="p-6 text-center text-slate-500">Nenhum pagamento encontrado para os filtros selecionados.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="glass rounded-3xl p-4 space-y-3">
+              <h3 class="font-black text-lg">Últimos pagamentos</h3>
+              <template x-for="p in paymentRecent" :key="'recent-pay-'+p.id">
+      <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+        <div class="flex items-start justify-between gap-3"><div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.paymentDate)+' • '+(p.paymentMethod||'forma não informada')"></p></div><p class="font-black text-emerald-700" x-text="money(p.paidValue||0)"></p></div>
+        <div class="flex flex-wrap gap-2 mt-2"><button @click="recentPaymentReceipt(p)" class="mini" :disabled="isViewer || !p.service" x-text="p.receipt?'Ver recibo':'Emitir recibo'"></button><button @click="p.service && openSearchService(p.service)" class="mini" :disabled="!p.service">Serviço</button><button @click="openDeleteSinglePaymentModal(p)" class="danger" :disabled="isViewer || !p.service" title="Exclui somente este pagamento">Excluir pagamento</button></div>
+      </div>
+    </template>
+              <p x-show="!paymentRecent.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado ainda.</p>
+            </div>
+          </div>
+        </section>
+
+        <section x-show="view==='recibos'" class="space-y-4">
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-emerald-600 dark:text-emerald-400 font-black">Emissão</p>
+                <h3 class="font-black text-lg">Emitir recibo profissional</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Selecione um serviço/pagamento já lançado para gerar o recibo formal.</p>
+              </div>
+              <div class="rounded-2xl px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 text-sm">
+                <b x-text="receipts.length"></b> recibos no histórico
+              </div>
+            </div>
+            <div class="grid lg:grid-cols-[1fr_auto] gap-3 items-end">
+              <label>
+                <span class="text-sm font-bold">Lançamento para emissão</span>
+                <select x-model="receiptServiceId" class="input mt-1">
+                  <option value="">Selecione um serviço/pagamento</option>
+                  <template x-for="s in services">
+                    <option :value="s.id" x-text="'#'+s.id+' • '+providerName(s.providerId)
+--- occurrence 3 at 2208667 ---
+ss="font-black text-lg mt-2" x-text="item.title"></h4>
+                    <p class="text-sm text-slate-500 dark:text-slate-400" x-text="item.subtitle"></p>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <p class="font-black" x-text="item.amount"></p>
+                    <p class="text-xs text-slate-500" x-text="item.date"></p>
+                  </div>
+                </div>
+                <p class="text-sm mt-3 leading-relaxed" x-text="item.description"></p>
+                <div class="flex flex-wrap gap-2 mt-4">
+                  <button x-show="item.kind==='provider'" @click="openSearchProvider(item.data)" class="mini">Painel</button>
+                  <button x-show="item.kind==='provider'" @click="fillServiceFromProvider(item.data)" class="mini" :disabled="isViewer">Lançar</button>
+                  <button x-show="item.kind==='provider'" @click="openWhatsapp(item.data)" class="mini">WhatsApp</button>
+
+                  <button x-show="item.kind==='service'" @click="openSearchService(item.data)" class="mini">Ver serviço</button>
+                  <button x-show="item.kind==='service'" @click="pay(item.data)" class="mini" :disabled="isViewer">Pagar</button>
+                  <button x-show="item.kind==='service' && Number(item.data?.paidValue||0)>0" @click="quickReceipt(item.data)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(item.data)==='-'?'Emitir recibo':'Ver recibo'"></button>
+
+                  <button x-show="item.kind==='receipt'" @click="openSearchReceipt(item.data)" class="mini">Abrir recibo</button>
+                  <button x-show="item.kind==='receipt'" @click="currentReceipt=item.data; printReceipt()" class="mini">Imprimir</button>
+
+                  <button x-show="item.kind==='recurrence'" @click="openSearchRecurrence(item.data)" class="mini">Ver recorrência</button>
+                  <button x-show="item.kind==='recurrence'" @click="generateRecurrence(item.data)" class="mini" :disabled="isViewer">Gerar mês</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div x-show="q && !searchResults.length" class="glass rounded-3xl p-5 text-center text-slate-500">
+            Nenhum resultado encontrado para a busca atual.
+          </div>
+          <div x-show="!q" class="glass rounded-3xl p-5 text-center text-slate-500">
+            Digite no campo de busca para localizar informações do app.
+          </div>
+        </section>
+
+        <section x-show="view==='config'" class="space-y-4">
+          <form @submit.prevent="saveSettings" class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex items-start gap-3">
+              <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-rc-800 to-rc-500 text-white grid place-items-center shadow-soft"><i data-lucide="building-2" class="w-5 h-5"></i></div>
+              <div>
+                <h3 class="font-black text-lg">Dados do condomínio</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Identidade usada nos recibos, relatórios e PDFs de prestação de contas.</p>
+              </div>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-3">
+              <label><span class="text-sm font-bold">Nome</span><input x-model="settings.condoName" class="input mt-1"></label>
+              <label><span class="text-sm font-bold">Responsável</span><input x-model="settings.manager" class="input mt-1"></label>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-3">
+              <label><span class="text-sm font-bold">CNPJ</span><input x-model="settings.cnpj" class="input mt-1"></label>
+              <label><span class="text-sm font-bold">Logo</span><input @change="readLogo" type="file" accept="image/*" class="input mt-1"></label>
+            </div>
+            <label><span class="text-sm font-bold">Endereço</span><input x-model="settings.address" class="input mt-1"></label>
+            <button class="primary">Salvar configurações</button>
+          </form>
+
+
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-3">
+                <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-rc-800 to-rc-gold text-white grid place-items-center shadow-soft"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                <div>
+                  <h3 class="font-black text-lg">Backup</h3>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Proteção e recuperaç
+--- occurrence 4 at 6519085 ---
+t-2',backup:'shield-check',restore:'rotate-ccw',danger:'triangle-alert',settings:'settings',delete:'trash-2'}[type]||'history'},fmtDateTime(d){if(!d)return'-';return new Date(d).toLocaleString('pt-BR')},async clearLogs(){if(this.isViewer)return;await db.logs.clear();this.logs=[];this.after()},providerSpend(id){return this.services.filter(s=>Number(s.providerId)===Number(id)).reduce((a,s)=>a+Number(s.amount||0),0)},providerPaid(id){return this.payments.filter(p=>Number(p.providerId)===Number(id)).reduce((a,p)=>a+Number(p.amount||0),0)},providerOpen(id){return this.services.filter(s=>Number(s.providerId)===Number(id)).reduce((a,s)=>a+this.balance(s),0)},openWhatsapp(p){let raw=String(p.whatsapp||p.phone||'').replace(/\D/g,'');if(!raw)return this.toast('Este prestador não tem WhatsApp/telefone cadastrado.','warning');let phone=raw.startsWith('55')?raw:'55'+raw;let msg=encodeURIComponent('Olá, '+p.name+'. Aqui é do '+this.settings.condoName+'.');window.open('https://wa.me/'+phone+'?text='+msg,'_blank')},overdueLabel(s){if(!s.dueDate||this.balance(s)<=0)return'';let today=new Date(this.today()+'T00:00:00'), due=new Date(s.dueDate+'T00:00:00'), days=Math.ceil((due-today)/86400000);if(days<0)return Math.abs(days)+' dia(s) em atraso';if(days===0)return'vence hoje';return'faltam '+days+' dia(s)'},providerName(id){return (this.providers.find(p=>Number(p.id)===Number(id))||{}).name||'-'},reportReceiptNumber(service){let r=this.receipts.find(x=>Number(x.serviceId)===Number(service.id));return r?.number||'-';},balance(s){return Math.max(0,Number(s.amount||0)-Number(s.paidValue||0))},statusClass(st){return st==='Pago'?'bg-emerald-500/10 text-emerald-700':st==='Parcial'?'bg-amber-500/10 text-amber-700':'bg-red-500/10 text-red-700'},valorPorExtenso(v){v=Number(v||0);let reais=Math.floor(v),cent=Math.round((v-reais)*100);let base={0:'zero',1:'um',2:'dois',3:'três',4:'quatro',5:'cinco',6:'seis',7:'sete',8:'oito',9:'nove',10:'dez',11:'onze',12:'doze',13:'treze',14:'quatorze',15:'quinze',16:'dezesseis',17:'dezessete',18:'dezoito',19:'dezenove',20:'vinte',30:'trinta',40:'quarenta',50:'cinquenta',60:'sessenta',70:'setenta',80:'oitenta',90:'noventa',100:'cem'};let ext=(n)=>{if(n<=20||base[n])return base[n];if(n<100){let d=Math.floor(n/10)*10,u=n%10;return base[d]+(u?' e '+base[u]:'')}if(n<1000){let c=Math.floor(n/100),r=n%100,cn=c===1?'cento':base[c]+' centos';cn=cn.replace('dois centos','duzentos').replace('três centos','trezentos').replace('quatro centos','quatrocentos').replace('cinco centos','quinhentos').replace('seis centos','seiscentos').replace('sete centos','setecentos').replace('oito centos','oitocentos').replace('nove centos','novecentos');return r?cn+' e '+ext(r):cn}if(n<1000000){let m=Math.floor(n/1000),r=n%1000;return (m===1?'mil':ext(m)+' mil')+(r?' e '+ext(r):'')}return n.toLocaleString('pt-BR')};let txt=ext(reais)+' '+(reais===1?'real':'reais');if(cent)txt+=' e '+ext(cent)+' '+(cent===1?'centavo':'centavos');return txt;},money(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})},today(){let d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day},fmt(d){if(!d)return'-';return new Date(d+'T00:00:00').toLocaleDateString('pt-BR')},month(m){if(!m)return'-';let [y,mo]=String(m).split('-');return new Date(Number(y),Number(mo)-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})},reportMonthLabel(){let src=(this.reportRows[0]?.reference)||String(this.report.from||this.today()).slice(0,7);let label=this.month(src);return String(label).replace(/ de \d{4}/,'').toUpperCase();},download(n,c,t){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:t}));a.download=n;a.click();URL.revokeObjectURL(a.href)},refreshIcons(){setTimeout(()=>window.lucide&&lucide.createIcons(),60)},after(){this.$nextTick(()=>{this.enhanceAccordions();this.refreshIcons();this.renderCharts();setTimeout(()=>this.resizeCharts(),120)})},enhanceAccordions(){try{const scopes=['prestadores','servicos','pagamentos','recibos','busca','config'];scopes.forEach(scope=>{const section=[...document.querySelectorAll('main section')].find(s=>(s.getAttribute('x-show')||'').includes(scope));if(!section)return;const panels=[...section.children].filter(el=>el.classList&&el.classList.contains('glass'));panels.forEach((panel,idx)=>{if(panel.dataset.rcAccordion==='1')return;panel.dataset.rcAccordion='1';panel.classList.add('rc-accordion-panel');const titleEl=panel.querySelector('h3,h2,h4');const title=(titleEl?.textContent||({prestadores:'Pre
+COUNT=4
+
+===== quickReceipt( =====
+
+--- occurrence 1 at 2150561 ---
+ext="dayCenterRows.length+' item(ns)'"></span></div>
+                <div class="space-y-2 max-h-80 overflow-auto scrollbar">
+                  <template x-for="item in dayCenterRows.slice(0,8)" :key="item.key">
+                    <div class="day-center-row">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <p class="font-black truncate" x-text="item.title"></p>
+                          <p class="text-xs text-slate-500 dark:text-slate-400" x-text="item.subtitle"></p>
+                        </div>
+                        <span class="text-xs font-black px-2 py-1 rounded-full shrink-0" :class="item.tone==='danger'?'bg-red-500/10 text-red-700':item.tone==='warning'?'bg-amber-500/10 text-amber-700':'bg-emerald-500/10 text-emerald-700'" x-text="item.badge"></span>
+                      </div>
+                      <div class="mt-2 flex items-center justify-between gap-2">
+                        <b :class="item.tone==='danger'?'text-red-600':'text-emerald-700'" x-text="item.value"></b>
+                        <div class="flex gap-2">
+                          <button x-show="item.kind==='service'" @click="pay(item.service)" class="mini" :disabled="isViewer">Pagar</button>
+                          <button x-show="item.kind==='service' && Number(item.service?.paidValue||0)>0" @click="quickReceipt(item.service)" class="mini">Recibo</button>
+                          <button x-show="item.kind==='recurrence'" @click="generateRecurrence(item.recurrence)" class="mini" :disabled="isViewer">Gerar</button>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  <p x-show="!dayCenterRows.length" class="text-sm text-slate-500 text-center py-4">Tudo em ordem para hoje.</p>
+                </div>
+              </div>
+              <div class="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <div class="flex items-start gap-3">
+                  <div class="h-10 w-10 rounded-2xl bg-emerald-600 text-white grid place-items-center shrink-0"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                  <div>
+                    <h4 class="font-black">Leitura rápida</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-300 mt-1" x-text="dayCenterSummary"></p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">Recorrência gera lançamento. Recibo continua sendo numerado somente quando emitido após pagamento.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid xl:grid-cols-3 gap-4">
+            <div class="glass rounded-3xl p-4 xl:col-span-2">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <div><h3 class="font-black">Gasto mensal no ano</h3><p class="text-xs text-slate-500 dark:text-slate-400">Total pago por mês em <span x-text="dashboardYear"></span></p></div>
+                <span class="badge" x-text="yearlyRows.length+' lançamento(s) no ano'"></span>
+              </div>
+              <div class="chart-box"><canvas id="monthlyChart"></canvas></div>
+            </div>
+            <div class="glass rounded-3xl p-4">
+              <div class="flex items-center justify-between gap-2 mb-3"><h3 class="font-black">Pagamentos por categoria</h3><span class="badge" x-text="annualCategorySummary.length+' categorias'"></span></div>
+              <div class="chart-box chart-box-sm"><canvas id="annualCatChart"></canvas></div>
+            </div>
+          </div>
+
+          <div class="grid xl:grid-cols-3 gap-4">
+            <div class="glass rounded-3xl p-4 xl:col-span-2 overflow-auto scrollbar">
+              <div class="flex items-center justify-between mb-3"><h3 class="font-black">Histórico mensal consolidado</h3><span class="badge">Janeiro a dezembro</span></div>
+              <table class="w-full text-sm min-w-[760px]">
+                <thead class="text-left text-slate-500 dark:text-slate-400"><tr><th class="p-2">Mês</th><th class="p-2 text-right">Pagamentos</th><th class="p-2 text-right">Total pago</th><th class="p-2 text-right">Em aberto</th><th class="p-2">Principal categoria</th></tr></thead>
+                <tbody>
+                  <template x-for="m in monthlyHistory" :key="m.key">
+                    <tr class="border-t border-slate-200/60 dark:border-slate-700/60">
+                      <td class="p-2 font-black" x-tex
+--- occurrence 2 at 2208600 ---
+lass="badge" x-text="item.type"></span>
+                    <h4 class="font-black text-lg mt-2" x-text="item.title"></h4>
+                    <p class="text-sm text-slate-500 dark:text-slate-400" x-text="item.subtitle"></p>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <p class="font-black" x-text="item.amount"></p>
+                    <p class="text-xs text-slate-500" x-text="item.date"></p>
+                  </div>
+                </div>
+                <p class="text-sm mt-3 leading-relaxed" x-text="item.description"></p>
+                <div class="flex flex-wrap gap-2 mt-4">
+                  <button x-show="item.kind==='provider'" @click="openSearchProvider(item.data)" class="mini">Painel</button>
+                  <button x-show="item.kind==='provider'" @click="fillServiceFromProvider(item.data)" class="mini" :disabled="isViewer">Lançar</button>
+                  <button x-show="item.kind==='provider'" @click="openWhatsapp(item.data)" class="mini">WhatsApp</button>
+
+                  <button x-show="item.kind==='service'" @click="openSearchService(item.data)" class="mini">Ver serviço</button>
+                  <button x-show="item.kind==='service'" @click="pay(item.data)" class="mini" :disabled="isViewer">Pagar</button>
+                  <button x-show="item.kind==='service' && Number(item.data?.paidValue||0)>0" @click="quickReceipt(item.data)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(item.data)==='-'?'Emitir recibo':'Ver recibo'"></button>
+
+                  <button x-show="item.kind==='receipt'" @click="openSearchReceipt(item.data)" class="mini">Abrir recibo</button>
+                  <button x-show="item.kind==='receipt'" @click="currentReceipt=item.data; printReceipt()" class="mini">Imprimir</button>
+
+                  <button x-show="item.kind==='recurrence'" @click="openSearchRecurrence(item.data)" class="mini">Ver recorrência</button>
+                  <button x-show="item.kind==='recurrence'" @click="generateRecurrence(item.data)" class="mini" :disabled="isViewer">Gerar mês</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div x-show="q && !searchResults.length" class="glass rounded-3xl p-5 text-center text-slate-500">
+            Nenhum resultado encontrado para a busca atual.
+          </div>
+          <div x-show="!q" class="glass rounded-3xl p-5 text-center text-slate-500">
+            Digite no campo de busca para localizar informações do app.
+          </div>
+        </section>
+
+        <section x-show="view==='config'" class="space-y-4">
+          <form @submit.prevent="saveSettings" class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex items-start gap-3">
+              <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-rc-800 to-rc-500 text-white grid place-items-center shadow-soft"><i data-lucide="building-2" class="w-5 h-5"></i></div>
+              <div>
+                <h3 class="font-black text-lg">Dados do condomínio</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Identidade usada nos recibos, relatórios e PDFs de prestação de contas.</p>
+              </div>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-3">
+              <label><span class="text-sm font-bold">Nome</span><input x-model="settings.condoName" class="input mt-1"></label>
+              <label><span class="text-sm font-bold">Responsável</span><input x-model="settings.manager" class="input mt-1"></label>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-3">
+              <label><span class="text-sm font-bold">CNPJ</span><input x-model="settings.cnpj" class="input mt-1"></label>
+              <label><span class="text-sm font-bold">Logo</span><input @change="readLogo" type="file" accept="image/*" class="input mt-1"></label>
+            </div>
+            <label><span class="text-sm font-bold">Endereço</span><input x-model="settings.address" class="input mt-1"></label>
+            <button class="primary">Salvar configurações</button>
+          </form>
+
+
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-3">
+                <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-rc-800 to-rc-gold text-white grid place-items-center shadow-soft"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                <div>
+                  <h3 class="font-black text-lg">Backup</h3>
+                  <p clas
+--- occurrence 3 at 6481961 ---
+0',iconBg:'bg-amber-500'},info:{title:'Informação',icon:'info',bar:'bg-rc-800',border:'border-rc-800/25',iconBg:'bg-gradient-to-br from-rc-800 to-rc-500'}}[type]||{};let id=Date.now()+Math.random();this.toasts.push({id,message,type,...cfg});this.refreshIcons();setTimeout(()=>this.dismissToast(id),4200)},dismissToast(id){this.toasts=this.toasts.filter(t=>t.id!==id)},doLogin(){let p=JSON.parse(localStorage.getItem('rc_passwords')||'{"admin":"123456","viewer":"123456"}');if(this.login.password===p[this.login.role]){this.auth={logged:true,role:this.login.role};this.login.password='';this.load();this.after()}else this.toast('Senha inválida','error')},logout(){this.auth={logged:false,role:'viewer'}},go(v){this.view=v;this.after()},toggleDark(){this.dark=!this.dark;localStorage.setItem('rc_dark',this.dark?'1':'0');document.documentElement.classList.toggle('dark',this.dark)},
+  providerAction(action,p){if(!action||!p)return;if(action==='painel')this.selectProvider(p);else if(action==='editar')this.editProvider(p);else if(action==='lancar'){if(!this.isViewer)this.fillServiceFromProvider(p)}else if(action==='whatsapp')this.openWhatsapp(p);else if(action==='excluir'){if(!this.isViewer)this.openDeleteProviderModal(p)}},serviceAction(action,s){if(!action||!s)return;if(action==='pagar'){if(!this.isViewer)this.pay(s)}else if(action==='recibo'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.quickReceipt(s)}else if(action==='duplicar'){if(!this.isViewer)this.openDuplicateModal(s)}else if(action==='excluir'){if(!this.isViewer)this.openDeleteServiceModal(s)}},paymentAction(action,s){if(!action||!s)return;if(action==='pagar'){if(!this.isViewer&&s.status!=='Pago')this.pay(s)}else if(action==='recibo'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.quickReceipt(s)}else if(action==='servico')this.openSearchService(s);else if(action==='excluirPagamento'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.openDeletePaymentModal(s)}},openSearchProvider(p){this.selectedProviderId=p?.id||null;this.view='prestadores';this.after()},openSearchService(s){this.serviceFilter='todos';this.serviceCategoryFilter='todas';this.serviceProviderFilter=String(s.providerId||'todos');this.serviceMonthFilter=s.reference||'';this.view='servicos';this.after()},openSearchReceipt(r){this.currentReceipt=r;this.receiptFilter={q:r.number||'',month:r.reference||'',category:'todas'};this.view='recibos';this.after()},openSearchRecurrence(r){this.recurrenceForm={...r};this.view='servicos';this.after()},selectProvider(p){this.selectedProviderId=p?.id||null;this.after()},providerSortBy(field){if(this.providerSortField===field){this.providerSortDir=this.providerSortDir==='asc'?'desc':'asc';}else{this.providerSortField=field;this.providerSortDir='asc';}},resetProvider(){this.providerForm={id:null,name:'',type:'Autônomo',document:'',category:'Jardineiro',phone:'',whatsapp:'',pix:'',notes:''}},editProvider(p){this.providerForm={...p};this.view='prestadores';this.after()},async saveProvider(){if(this.isViewer)return;let d={...this.providerForm};let doc=String(d.document||'').replace(/\D/g,'');if(doc){let duplicate=this.providers.find(p=>Number(p.id)!==Number(d.id)&&String(p.document||'').replace(/\D/g,'')===doc);if(duplicate)return this.toast('Já existe um prestador cadastrado com este CPF/CNPJ: '+(duplicate.name||'cadastro existente')+'.','warning')}if(d.id){await db.providers.update(d.id,d);await this.logAction('provider','Prestador atualizado',d.name||'Cadastro atualizado')}else{delete d.id;await db.providers.add(d);await this.logAction('provider','Prestador cadastrado',d.name||'Novo prestador')}this.resetProvider();await this.load();this.toast('Prestador salvo')},openDeleteProviderModal(p){if(this.isViewer)return;this.actionModal={open:true,type:'deleteProvider',tone:'danger',icon:'user-x',target:p,service:null,title:'Excluir prestador',subtitle:'Essa ação remove o cadastro do prestador.',note:'Prestadores com lançamentos, recibos ou recorrências vinculadas não podem ser excluídos. Isso preserva a rastreabilidade do histórico.',confirmLabel:'Excluir prestador',details:[{label:'Prestador',value:p.name||'-'},{label:'Categoria',value:p.category||'-'},{label:'Documento',value:p.document||'não informado'}]};this.after()},async removeProviderInternal(id){let p=this.providers.find(x=>Number(x.id)===Number(id));if(!p)return;let linkedServices=this.services.some(s=>Number(s.providerId)===Number(id)),linkedReceipts=this.receipts.some(r=>Number(r.providerId)===Number(id)),linkedRecurrences=(this.recurrences||[]).some(r=>Number(r.providerId)===Number(id));if(linkedServices||linkedRec
+--- occurrence 4 at 6482322 ---
+==id)},doLogin(){let p=JSON.parse(localStorage.getItem('rc_passwords')||'{"admin":"123456","viewer":"123456"}');if(this.login.password===p[this.login.role]){this.auth={logged:true,role:this.login.role};this.login.password='';this.load();this.after()}else this.toast('Senha inválida','error')},logout(){this.auth={logged:false,role:'viewer'}},go(v){this.view=v;this.after()},toggleDark(){this.dark=!this.dark;localStorage.setItem('rc_dark',this.dark?'1':'0');document.documentElement.classList.toggle('dark',this.dark)},
+  providerAction(action,p){if(!action||!p)return;if(action==='painel')this.selectProvider(p);else if(action==='editar')this.editProvider(p);else if(action==='lancar'){if(!this.isViewer)this.fillServiceFromProvider(p)}else if(action==='whatsapp')this.openWhatsapp(p);else if(action==='excluir'){if(!this.isViewer)this.openDeleteProviderModal(p)}},serviceAction(action,s){if(!action||!s)return;if(action==='pagar'){if(!this.isViewer)this.pay(s)}else if(action==='recibo'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.quickReceipt(s)}else if(action==='duplicar'){if(!this.isViewer)this.openDuplicateModal(s)}else if(action==='excluir'){if(!this.isViewer)this.openDeleteServiceModal(s)}},paymentAction(action,s){if(!action||!s)return;if(action==='pagar'){if(!this.isViewer&&s.status!=='Pago')this.pay(s)}else if(action==='recibo'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.quickReceipt(s)}else if(action==='servico')this.openSearchService(s);else if(action==='excluirPagamento'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.openDeletePaymentModal(s)}},openSearchProvider(p){this.selectedProviderId=p?.id||null;this.view='prestadores';this.after()},openSearchService(s){this.serviceFilter='todos';this.serviceCategoryFilter='todas';this.serviceProviderFilter=String(s.providerId||'todos');this.serviceMonthFilter=s.reference||'';this.view='servicos';this.after()},openSearchReceipt(r){this.currentReceipt=r;this.receiptFilter={q:r.number||'',month:r.reference||'',category:'todas'};this.view='recibos';this.after()},openSearchRecurrence(r){this.recurrenceForm={...r};this.view='servicos';this.after()},selectProvider(p){this.selectedProviderId=p?.id||null;this.after()},providerSortBy(field){if(this.providerSortField===field){this.providerSortDir=this.providerSortDir==='asc'?'desc':'asc';}else{this.providerSortField=field;this.providerSortDir='asc';}},resetProvider(){this.providerForm={id:null,name:'',type:'Autônomo',document:'',category:'Jardineiro',phone:'',whatsapp:'',pix:'',notes:''}},editProvider(p){this.providerForm={...p};this.view='prestadores';this.after()},async saveProvider(){if(this.isViewer)return;let d={...this.providerForm};let doc=String(d.document||'').replace(/\D/g,'');if(doc){let duplicate=this.providers.find(p=>Number(p.id)!==Number(d.id)&&String(p.document||'').replace(/\D/g,'')===doc);if(duplicate)return this.toast('Já existe um prestador cadastrado com este CPF/CNPJ: '+(duplicate.name||'cadastro existente')+'.','warning')}if(d.id){await db.providers.update(d.id,d);await this.logAction('provider','Prestador atualizado',d.name||'Cadastro atualizado')}else{delete d.id;await db.providers.add(d);await this.logAction('provider','Prestador cadastrado',d.name||'Novo prestador')}this.resetProvider();await this.load();this.toast('Prestador salvo')},openDeleteProviderModal(p){if(this.isViewer)return;this.actionModal={open:true,type:'deleteProvider',tone:'danger',icon:'user-x',target:p,service:null,title:'Excluir prestador',subtitle:'Essa ação remove o cadastro do prestador.',note:'Prestadores com lançamentos, recibos ou recorrências vinculadas não podem ser excluídos. Isso preserva a rastreabilidade do histórico.',confirmLabel:'Excluir prestador',details:[{label:'Prestador',value:p.name||'-'},{label:'Categoria',value:p.category||'-'},{label:'Documento',value:p.document||'não informado'}]};this.after()},async removeProviderInternal(id){let p=this.providers.find(x=>Number(x.id)===Number(id));if(!p)return;let linkedServices=this.services.some(s=>Number(s.providerId)===Number(id)),linkedReceipts=this.receipts.some(r=>Number(r.providerId)===Number(id)),linkedRecurrences=(this.recurrences||[]).some(r=>Number(r.providerId)===Number(id));if(linkedServices||linkedReceipts||linkedRecurrences){return this.toast('Este prestador possui histórico ou recorrência vinculada e não pode ser excluído. Mantenha o cadastro para preservar a rastreabilidade.','warning')}await db.providers.delete(id);await this.logAction('delete','Prestador excluído',p.name||('ID '+id));await this.load()},
+  resetRecurrence(){this.recurrenceForm={id:nul
+--- occurrence 5 at 6502637 ---
+s.paidValue||0));if(value<=0)return this.toast('Informe um valor de pagamento maior que zero.','warning');if(value>remaining+0.000001)return this.toast('O pagamento não pode ser maior que o saldo pendente de '+this.money(remaining)+'.','warning');let paid=Number(s.paidValue||0)+value,status=paid>=Number(s.amount)?'Pago':'Parcial';await db.transaction('rw',db.services,db.payments,async()=>{await db.payments.add({serviceId:s.id,providerId:s.providerId,date:paymentDate,amount:value,method,receiptId:null,source:'manual',createdAt:new Date().toISOString()});await db.services.update(s.id,{paidValue:paid,paymentDate,paymentMethod:method,status})});await this.logAction('payment','Pagamento registrado',this.providerName(s.providerId)+' • '+this.money(value)+' • '+method);this.payModal=false;await this.load();this.toast(status==='Pago'?'Pagamento registrado. Lançamento quitado.':'Pagamento parcial registrado. Saldo restante: '+this.money(Math.max(0,Number(s.amount||0)-paid)))},prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()},async recentPaymentReceipt(p){if(this.isViewer||!p||!p.service)return;if(p.receipt){this.currentReceipt=p.receipt;this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),220);return}this.receiptServiceId=p.service.id;await this.issueReceipt(p.id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260)},async quickReceipt(s){if(this.isViewer)return;if(Number(s.paidValue||0)<=0)return this.toast('Registre o pagamento antes de emitir o recibo.','warning');let receiptPaymentIds=new Set(this.receipts.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0));if(candidates.length){this.receiptServiceId=s.id;await this.issueReceipt(candidates[0].id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260);return}let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),latest=linked.slice().sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];if(latest){this.currentReceipt=latest;this.view='recibos';this.after();this.toast('Todos os pagamentos registrados já possuem recibo.','warning');setTimeout(()=>this.printReceipt(),220)}else this.toast('Não há pagamento pendente de recibo.','warning')},async issueReceipt(paymentId=null){if(this.isViewer)return;let s=this.services.find(x=>Number(x.id)===Number(this.receiptServiceId));if(!s)return this.toast('Selecione um lançamento.','warning');let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),legacyPending=Math.max(0,Number(s.paidValue||0)-issued),receiptPaymentIds=new Set(linked.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0)),payment=paymentId?(candidates.find(p=>Number(p.id)===Number(paymentId))||null):(candidates[0]||null);if(paymentId&&!payment)return this.toast('Este pagamento já possui recibo ou não está disponível para emissão.','warning');if(!payment&&legacyPending<=0)return this.toast('Todos os pagamentos registrados deste lançamento já possuem recibo.','warning');let receiptTotal=payment?Number(payment.amount||0):legacyPending,paymentDate=payment?.date||s.paymentDate||this.today(),paymentMethod=payment?.method||s.paymentMethod||'Não informado',desc=String(s.description||'').replace(/(\bparcela\s+)(\d+)\s*\/\s*(\d+)/i,(m,prefix,current,total)=>prefix+String(linked.length+1).padStart(current.length,'0')+'/'+total),p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{},r=null;await db.transaction('rw',db.meta,db.receipts,db.payments,async()=>{let meta=await db.meta.get('receiptSeq'),next=Math.max(Number(meta?.value||0),this.receiptMaxNumber())+1;r={number:String(next).padStart(6,'0'),date:this.today(),paymentDate,providerId:p.id,providerName:p.name||'Prestador não informado',document:p.document||'',category:s.category,reference:s.reference,description:desc,total:receiptTotal,paymentMethod,location:s.location,serviceId:s.id,paymentId:payment?.id||null,manager:this.settings.manager,condoName:this.settings.condoName,condoCnpj:this.settings.cnpj||'',condoAddress:this.settings.address||''};await db.meta.put({key:'receiptSeq',value:next});let id=await db.receipts.add(r);r.id=id;if(payment)
+COUNT=5
+
+===== recentPaymentReceipt( =====
+
+--- occurrence 1 at 2174672 ---
+ed-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Recibos</p><p class="text-xl font-black text-rc-gold" x-text="servicePanelReceiptCount"></p><p class="text-xs text-slate-500">emitidos no mês</p></div>
+            </div>
+            <div class="grid xl:grid-cols-3 gap-3">
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 xl:col-span-2">
+                <div class="flex items-center justify-between gap-2 mb-2"><h4 class="font-black">Últimos pagamentos do mês</h4><span class="badge" x-text="month(servicePanelMonth)"></span></div>
+                <div class="space-y-2">
+                  <template x-for="p in servicePanelPaymentEvents.slice(0,5)" :key="'panel-pay-'+p.id">
+          <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
+            <div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.date)+' • '+(p.service?.category||'Sem categoria')+' • '+(p.method||'forma não informada')"></p></div>
+            <div class="text-right"><p class="font-black text-emerald-700" x-text="money(p.amount||0)"></p><button @click="recentPaymentReceipt(p)" class="mini" :disabled="isViewer || !p.service" x-text="p.receipt?'Ver recibo':'Emitir recibo'"></button></div>
+          </div>
+        </template>
+                  <p x-show="!servicePanelPaymentEvents.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>
+                </div>
+              </div>
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3">
+                <h4 class="font-black mb-2">Pendências e recorrências</h4>
+                <div class="space-y-2">
+                  <template x-for="s in servicePanelOpenRows.slice(0,4)" :key="'open-'+s.id">
+                    <div class="rounded-2xl border border-red-500/15 bg-red-500/5 p-2"><p class="font-black text-sm" x-text="providerName(s.providerId)"></p><p class="text-xs text-red-700" x-text="money(balance(s))+' • '+overdueLabel(s)"></p></div>
+                  </template>
+                  <template x-for="r in servicePanelPendingRecurrences.slice(0,3)" :key="'rec-'+r.id">
+                    <div class="rounded-2xl border border-amber-500/20 bg-amber-500/8 p-2"><p class="font-black text-sm" x-text="providerName(r.providerId)"></p><p class="text-xs text-amber-700" x-text="'Recorrência pendente • '+money(r.amount)"></p></div>
+                  </template>
+                  <p x-show="!servicePanelOpenRows.length && !servicePanelPendingRecurrences.length" class="text-sm text-slate-500 text-center py-3">Mês sem pendências operacionais.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <form @submit.prevent="saveService" class="glass rounded-3xl p-4 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"><div><h3 class="font-black text-lg">Lançar serviço/pagamento</h3><p class="text-xs text-slate-500 dark:text-slate-400">Cadastre primeiro o serviço, gratificação ou pagamento avulso. A lista de lançamentos fica organizada logo abaixo.</p></div><span class="badge">novo lançamento</span></div>
+            <div class="grid md:grid-cols-3 gap-3"><label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="serviceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label><label><span class="text-sm font-bold">Categoria</span><select x-model="serviceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label><label><span class="text-sm font-bold">Referência</span><input x-model="serviceForm.reference" type="month" required class="input mt-1"></label></div>
+            <div class="grid sm:grid-cols-2 gap-3"><label><span class="text-sm font-bold">Data do serviço</span><input x-model="serviceForm.serviceDate" type="date" required class="input mt-1"></label><label><span class="text-sm font-bold">Vencimento</span><input x-model="serviceForm.dueDate" type="date" required class="input mt-1"></label></div>
+            <div class="grid sm:grid-col
+--- occurrence 2 at 2195291 ---
+=='Pago'">Pagar</option><option value="recibo" :disabled="isViewer || Number(s.paidValue||0)<=0" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></option><option value="servico">Abrir serviço</option><option value="excluirPagamento" :disabled="isViewer || Number(s.paidValue||0)<=0">Excluir pagamento</option></select></td>
+                      </tr>
+                    </template>
+                    <tr x-show="!filteredPayments.length"><td colspan="5" class="p-6 text-center text-slate-500">Nenhum pagamento encontrado para os filtros selecionados.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="glass rounded-3xl p-4 space-y-3">
+              <h3 class="font-black text-lg">Últimos pagamentos</h3>
+              <template x-for="p in paymentRecent" :key="'recent-pay-'+p.id">
+      <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+        <div class="flex items-start justify-between gap-3"><div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.paymentDate)+' • '+(p.paymentMethod||'forma não informada')"></p></div><p class="font-black text-emerald-700" x-text="money(p.paidValue||0)"></p></div>
+        <div class="flex flex-wrap gap-2 mt-2"><button @click="recentPaymentReceipt(p)" class="mini" :disabled="isViewer || !p.service" x-text="p.receipt?'Ver recibo':'Emitir recibo'"></button><button @click="p.service && openSearchService(p.service)" class="mini" :disabled="!p.service">Serviço</button><button @click="openDeleteSinglePaymentModal(p)" class="danger" :disabled="isViewer || !p.service" title="Exclui somente este pagamento">Excluir pagamento</button></div>
+      </div>
+    </template>
+              <p x-show="!paymentRecent.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado ainda.</p>
+            </div>
+          </div>
+        </section>
+
+        <section x-show="view==='recibos'" class="space-y-4">
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-emerald-600 dark:text-emerald-400 font-black">Emissão</p>
+                <h3 class="font-black text-lg">Emitir recibo profissional</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Selecione um serviço/pagamento já lançado para gerar o recibo formal.</p>
+              </div>
+              <div class="rounded-2xl px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 text-sm">
+                <b x-text="receipts.length"></b> recibos no histórico
+              </div>
+            </div>
+            <div class="grid lg:grid-cols-[1fr_auto] gap-3 items-end">
+              <label>
+                <span class="text-sm font-bold">Lançamento para emissão</span>
+                <select x-model="receiptServiceId" class="input mt-1">
+                  <option value="">Selecione um serviço/pagamento</option>
+                  <template x-for="s in services">
+                    <option :value="s.id" x-text="'#'+s.id+' • '+providerName(s.providerId)+' • '+s.category+' • '+money(s.amount)"></option>
+                  </template>
+                </select>
+              </label>
+              <div class="grid sm:grid-cols-2 gap-2 lg:min-w-[360px]">
+                <button @click="issueReceipt" class="primary w-full" :disabled="isViewer">Emitir recibo</button>
+                <button @click="printReceipt" class="secondary w-full">Imprimir / Salvar PDF</button>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white/50 dark:bg-slate-950/30 p-3 text-xs text-slate-500 dark:text-slate-400">
+              Use <b>Imprimir / Salvar PDF</b> e escolha “Salvar como PDF”. O recibo agora sai em layout A4 premium/oficial compacto, ajustado para caber em uma única página, com quadro de conferência, valor por extenso, assinatura e rodapé para prestação de contas.
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-rc-600 dark:text-rc-300 font-black">Histórico</p>
+                <h3 class="font-black text-lg">Recibos emitidos</h3>
+              </
+--- occurrence 3 at 6502304 ---
+t=s;this.payment={date:this.today(),value:this.balance(s),method:'PIX'};this.payModal=true},async savePayment(){if(this.isViewer)return;let s=this.paymentTarget,value=Number(this.payment.value||0),paymentDate=this.payment.date||this.today(),method=this.payment.method||'Não informado',remaining=Math.max(0,Number(s.amount||0)-Number(s.paidValue||0));if(value<=0)return this.toast('Informe um valor de pagamento maior que zero.','warning');if(value>remaining+0.000001)return this.toast('O pagamento não pode ser maior que o saldo pendente de '+this.money(remaining)+'.','warning');let paid=Number(s.paidValue||0)+value,status=paid>=Number(s.amount)?'Pago':'Parcial';await db.transaction('rw',db.services,db.payments,async()=>{await db.payments.add({serviceId:s.id,providerId:s.providerId,date:paymentDate,amount:value,method,receiptId:null,source:'manual',createdAt:new Date().toISOString()});await db.services.update(s.id,{paidValue:paid,paymentDate,paymentMethod:method,status})});await this.logAction('payment','Pagamento registrado',this.providerName(s.providerId)+' • '+this.money(value)+' • '+method);this.payModal=false;await this.load();this.toast(status==='Pago'?'Pagamento registrado. Lançamento quitado.':'Pagamento parcial registrado. Saldo restante: '+this.money(Math.max(0,Number(s.amount||0)-paid)))},prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()},async recentPaymentReceipt(p){if(this.isViewer||!p||!p.service)return;if(p.receipt){this.currentReceipt=p.receipt;this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),220);return}this.receiptServiceId=p.service.id;await this.issueReceipt(p.id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260)},async quickReceipt(s){if(this.isViewer)return;if(Number(s.paidValue||0)<=0)return this.toast('Registre o pagamento antes de emitir o recibo.','warning');let receiptPaymentIds=new Set(this.receipts.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0));if(candidates.length){this.receiptServiceId=s.id;await this.issueReceipt(candidates[0].id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260);return}let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),latest=linked.slice().sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];if(latest){this.currentReceipt=latest;this.view='recibos';this.after();this.toast('Todos os pagamentos registrados já possuem recibo.','warning');setTimeout(()=>this.printReceipt(),220)}else this.toast('Não há pagamento pendente de recibo.','warning')},async issueReceipt(paymentId=null){if(this.isViewer)return;let s=this.services.find(x=>Number(x.id)===Number(this.receiptServiceId));if(!s)return this.toast('Selecione um lançamento.','warning');let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),legacyPending=Math.max(0,Number(s.paidValue||0)-issued),receiptPaymentIds=new Set(linked.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0)),payment=paymentId?(candidates.find(p=>Number(p.id)===Number(paymentId))||null):(candidates[0]||null);if(paymentId&&!payment)return this.toast('Este pagamento já possui recibo ou não está disponível para emissão.','warning');if(!payment&&legacyPending<=0)return this.toast('Todos os pagamentos registrados deste lançamento já possuem recibo.','warning');let receiptTotal=payment?Number(payment.amount||0):legacyPending,paymentDate=payment?.date||s.paymentDate||this.today(),paymentMethod=payment?.method||s.paymentMethod||'Não informado',desc=String(s.description||'').replace(/(\bparcela\s+)(\d+)\s*\/\s*(\d+)/i,(m,prefix,current,total)=>prefix+String(linked.length+1).padStart(current.length,'0')+'/'+total),p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{},r=null;await db.transaction('rw',db.meta,db.receipts,db.payments,async()=>{let meta=await db.meta.get('receiptSeq'),next=Math.max(Number(meta?.value||0),this.receiptMaxNumber())+1;r={number:String(next).padStart(6,'0'),date:this.today(),paymentDate,providerId:p.id,providerName:p.name||'Prestador não informado',document:p.document||'',category:s.category,reference:s.reference,description:desc,
+COUNT=3
+
+===== issueReceipt( =====
+
+--- occurrence 1 at 6502538 ---
+oday(),method=this.payment.method||'Não informado',remaining=Math.max(0,Number(s.amount||0)-Number(s.paidValue||0));if(value<=0)return this.toast('Informe um valor de pagamento maior que zero.','warning');if(value>remaining+0.000001)return this.toast('O pagamento não pode ser maior que o saldo pendente de '+this.money(remaining)+'.','warning');let paid=Number(s.paidValue||0)+value,status=paid>=Number(s.amount)?'Pago':'Parcial';await db.transaction('rw',db.services,db.payments,async()=>{await db.payments.add({serviceId:s.id,providerId:s.providerId,date:paymentDate,amount:value,method,receiptId:null,source:'manual',createdAt:new Date().toISOString()});await db.services.update(s.id,{paidValue:paid,paymentDate,paymentMethod:method,status})});await this.logAction('payment','Pagamento registrado',this.providerName(s.providerId)+' • '+this.money(value)+' • '+method);this.payModal=false;await this.load();this.toast(status==='Pago'?'Pagamento registrado. Lançamento quitado.':'Pagamento parcial registrado. Saldo restante: '+this.money(Math.max(0,Number(s.amount||0)-paid)))},prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()},async recentPaymentReceipt(p){if(this.isViewer||!p||!p.service)return;if(p.receipt){this.currentReceipt=p.receipt;this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),220);return}this.receiptServiceId=p.service.id;await this.issueReceipt(p.id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260)},async quickReceipt(s){if(this.isViewer)return;if(Number(s.paidValue||0)<=0)return this.toast('Registre o pagamento antes de emitir o recibo.','warning');let receiptPaymentIds=new Set(this.receipts.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0));if(candidates.length){this.receiptServiceId=s.id;await this.issueReceipt(candidates[0].id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260);return}let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),latest=linked.slice().sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];if(latest){this.currentReceipt=latest;this.view='recibos';this.after();this.toast('Todos os pagamentos registrados já possuem recibo.','warning');setTimeout(()=>this.printReceipt(),220)}else this.toast('Não há pagamento pendente de recibo.','warning')},async issueReceipt(paymentId=null){if(this.isViewer)return;let s=this.services.find(x=>Number(x.id)===Number(this.receiptServiceId));if(!s)return this.toast('Selecione um lançamento.','warning');let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),legacyPending=Math.max(0,Number(s.paidValue||0)-issued),receiptPaymentIds=new Set(linked.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0)),payment=paymentId?(candidates.find(p=>Number(p.id)===Number(paymentId))||null):(candidates[0]||null);if(paymentId&&!payment)return this.toast('Este pagamento já possui recibo ou não está disponível para emissão.','warning');if(!payment&&legacyPending<=0)return this.toast('Todos os pagamentos registrados deste lançamento já possuem recibo.','warning');let receiptTotal=payment?Number(payment.amount||0):legacyPending,paymentDate=payment?.date||s.paymentDate||this.today(),paymentMethod=payment?.method||s.paymentMethod||'Não informado',desc=String(s.description||'').replace(/(\bparcela\s+)(\d+)\s*\/\s*(\d+)/i,(m,prefix,current,total)=>prefix+String(linked.length+1).padStart(current.length,'0')+'/'+total),p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{},r=null;await db.transaction('rw',db.meta,db.receipts,db.payments,async()=>{let meta=await db.meta.get('receiptSeq'),next=Math.max(Number(meta?.value||0),this.receiptMaxNumber())+1;r={number:String(next).padStart(6,'0'),date:this.today(),paymentDate,providerId:p.id,providerName:p.name||'Prestador não informado',document:p.document||'',category:s.category,reference:s.reference,description:desc,total:receiptTotal,paymentMethod,location:s.location,serviceId:s.id,paymentId:payment?.id||null,manager:this.settings.manager,condoName:this.settings.condoName,condoCnpj:this.settings.cnpj||'',condoAddress:this.settings.address||''};a
+--- occurrence 2 at 6503155 ---
+al',createdAt:new Date().toISOString()});await db.services.update(s.id,{paidValue:paid,paymentDate,paymentMethod:method,status})});await this.logAction('payment','Pagamento registrado',this.providerName(s.providerId)+' • '+this.money(value)+' • '+method);this.payModal=false;await this.load();this.toast(status==='Pago'?'Pagamento registrado. Lançamento quitado.':'Pagamento parcial registrado. Saldo restante: '+this.money(Math.max(0,Number(s.amount||0)-paid)))},prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()},async recentPaymentReceipt(p){if(this.isViewer||!p||!p.service)return;if(p.receipt){this.currentReceipt=p.receipt;this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),220);return}this.receiptServiceId=p.service.id;await this.issueReceipt(p.id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260)},async quickReceipt(s){if(this.isViewer)return;if(Number(s.paidValue||0)<=0)return this.toast('Registre o pagamento antes de emitir o recibo.','warning');let receiptPaymentIds=new Set(this.receipts.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0));if(candidates.length){this.receiptServiceId=s.id;await this.issueReceipt(candidates[0].id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260);return}let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),latest=linked.slice().sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];if(latest){this.currentReceipt=latest;this.view='recibos';this.after();this.toast('Todos os pagamentos registrados já possuem recibo.','warning');setTimeout(()=>this.printReceipt(),220)}else this.toast('Não há pagamento pendente de recibo.','warning')},async issueReceipt(paymentId=null){if(this.isViewer)return;let s=this.services.find(x=>Number(x.id)===Number(this.receiptServiceId));if(!s)return this.toast('Selecione um lançamento.','warning');let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),legacyPending=Math.max(0,Number(s.paidValue||0)-issued),receiptPaymentIds=new Set(linked.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0)),payment=paymentId?(candidates.find(p=>Number(p.id)===Number(paymentId))||null):(candidates[0]||null);if(paymentId&&!payment)return this.toast('Este pagamento já possui recibo ou não está disponível para emissão.','warning');if(!payment&&legacyPending<=0)return this.toast('Todos os pagamentos registrados deste lançamento já possuem recibo.','warning');let receiptTotal=payment?Number(payment.amount||0):legacyPending,paymentDate=payment?.date||s.paymentDate||this.today(),paymentMethod=payment?.method||s.paymentMethod||'Não informado',desc=String(s.description||'').replace(/(\bparcela\s+)(\d+)\s*\/\s*(\d+)/i,(m,prefix,current,total)=>prefix+String(linked.length+1).padStart(current.length,'0')+'/'+total),p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{},r=null;await db.transaction('rw',db.meta,db.receipts,db.payments,async()=>{let meta=await db.meta.get('receiptSeq'),next=Math.max(Number(meta?.value||0),this.receiptMaxNumber())+1;r={number:String(next).padStart(6,'0'),date:this.today(),paymentDate,providerId:p.id,providerName:p.name||'Prestador não informado',document:p.document||'',category:s.category,reference:s.reference,description:desc,total:receiptTotal,paymentMethod,location:s.location,serviceId:s.id,paymentId:payment?.id||null,manager:this.settings.manager,condoName:this.settings.condoName,condoCnpj:this.settings.cnpj||'',condoAddress:this.settings.address||''};await db.meta.put({key:'receiptSeq',value:next});let id=await db.receipts.add(r);r.id=id;if(payment)await db.payments.update(payment.id,{receiptId:id})});this.currentReceipt=r;await this.logAction('receipt','Recibo emitido','Nº '+r.number+' • '+r.providerName+' • '+this.money(r.total||0));await this.load();this.toast('Recibo nº '+r.number+' emitido no valor de '+this.money(r.total||0)+'.')},printReceipt(){if(!this.currentReceipt&&this.receipts.length)this.currentReceipt=this.receipts[this.receipts.length-1];document.getElementById('receiptPrint').classList.remove('hidden');document.getElementById('reportPrint')
+--- occurrence 3 at 6503666 ---
+is.view='recibos';this.after()},async recentPaymentReceipt(p){if(this.isViewer||!p||!p.service)return;if(p.receipt){this.currentReceipt=p.receipt;this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),220);return}this.receiptServiceId=p.service.id;await this.issueReceipt(p.id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260)},async quickReceipt(s){if(this.isViewer)return;if(Number(s.paidValue||0)<=0)return this.toast('Registre o pagamento antes de emitir o recibo.','warning');let receiptPaymentIds=new Set(this.receipts.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0));if(candidates.length){this.receiptServiceId=s.id;await this.issueReceipt(candidates[0].id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260);return}let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),latest=linked.slice().sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];if(latest){this.currentReceipt=latest;this.view='recibos';this.after();this.toast('Todos os pagamentos registrados já possuem recibo.','warning');setTimeout(()=>this.printReceipt(),220)}else this.toast('Não há pagamento pendente de recibo.','warning')},async issueReceipt(paymentId=null){if(this.isViewer)return;let s=this.services.find(x=>Number(x.id)===Number(this.receiptServiceId));if(!s)return this.toast('Selecione um lançamento.','warning');let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),legacyPending=Math.max(0,Number(s.paidValue||0)-issued),receiptPaymentIds=new Set(linked.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0)),payment=paymentId?(candidates.find(p=>Number(p.id)===Number(paymentId))||null):(candidates[0]||null);if(paymentId&&!payment)return this.toast('Este pagamento já possui recibo ou não está disponível para emissão.','warning');if(!payment&&legacyPending<=0)return this.toast('Todos os pagamentos registrados deste lançamento já possuem recibo.','warning');let receiptTotal=payment?Number(payment.amount||0):legacyPending,paymentDate=payment?.date||s.paymentDate||this.today(),paymentMethod=payment?.method||s.paymentMethod||'Não informado',desc=String(s.description||'').replace(/(\bparcela\s+)(\d+)\s*\/\s*(\d+)/i,(m,prefix,current,total)=>prefix+String(linked.length+1).padStart(current.length,'0')+'/'+total),p=this.providers.find(x=>Number(x.id)===Number(s.providerId))||{},r=null;await db.transaction('rw',db.meta,db.receipts,db.payments,async()=>{let meta=await db.meta.get('receiptSeq'),next=Math.max(Number(meta?.value||0),this.receiptMaxNumber())+1;r={number:String(next).padStart(6,'0'),date:this.today(),paymentDate,providerId:p.id,providerName:p.name||'Prestador não informado',document:p.document||'',category:s.category,reference:s.reference,description:desc,total:receiptTotal,paymentMethod,location:s.location,serviceId:s.id,paymentId:payment?.id||null,manager:this.settings.manager,condoName:this.settings.condoName,condoCnpj:this.settings.cnpj||'',condoAddress:this.settings.address||''};await db.meta.put({key:'receiptSeq',value:next});let id=await db.receipts.add(r);r.id=id;if(payment)await db.payments.update(payment.id,{receiptId:id})});this.currentReceipt=r;await this.logAction('receipt','Recibo emitido','Nº '+r.number+' • '+r.providerName+' • '+this.money(r.total||0));await this.load();this.toast('Recibo nº '+r.number+' emitido no valor de '+this.money(r.total||0)+'.')},printReceipt(){if(!this.currentReceipt&&this.receipts.length)this.currentReceipt=this.receipts[this.receipts.length-1];document.getElementById('receiptPrint').classList.remove('hidden');document.getElementById('reportPrint').classList.add('hidden');document.getElementById('annualReportPrint').classList.add('hidden');setTimeout(()=>window.print(),100)},async removeReceiptInternal(id){let r=this.receipts.find(x=>Number(x.id)===Number(id));if(!r)return;let linked=this.receipts.filter(x=>Number(x.serviceId)===Number(r.serviceId)).sort((a,b)=>Number(b.id||0)-Number(a.id||0)),latest=linked[0];if(latest&&Number(latest.id)!==Number(r.id))return this.toast('Para preservar a data e a forma de pagamento das parcelas, somente o recibo ma
+COUNT=3
+
+===== openReceipt( =====
+
+COUNT=0
+
+===== serviceAction( =====
+
+--- occurrence 1 at 2187632 ---
+lass="input" title="Filtrar por referência"></div><button @click="clearServiceFilters" class="secondary w-full sm:w-auto sm:self-end">Limpar filtros</button></div><div class="overflow-auto scrollbar"><table class="w-full text-sm"><thead class="text-left text-slate-500"><tr><th class="p-2">Prestador</th><th class="p-2">Serviço</th><th class="p-2">Valor</th><th class="p-2">Status</th><th class="p-2">Ações</th></tr></thead><tbody><template x-for="s in filteredServices" :key="s.id"><tr class="border-t border-slate-200/60 dark:border-slate-700/60"><td class="p-2"><b x-text="providerName(s.providerId)"></b><br><span class="text-xs text-slate-500" x-text="month(s.reference)+' • '+fmt(s.serviceDate)"></span></td><td class="p-2"><span class="badge" x-text="s.category"></span><br><span class="text-xs" x-text="s.description"></span></td><td class="p-2"><b x-text="money(s.amount)"></b><br><span class="text-xs text-slate-500" x-text="'Pago: '+money(s.paidValue||0)"></span><br><span class="text-xs text-slate-500" x-show="s.paymentDate" x-text="fmt(s.paymentDate)+' • '+(s.paymentMethod||'forma não informada')"></span></td><td class="p-2"><span class="badge" :class="statusClass(s.status)" x-text="s.status"></span><br><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="overdueLabel(s)"></span></td><td class="p-2 min-w-[150px]"><select class="input py-2 text-xs font-black" @change="serviceAction($event.target.value,s); $event.target.value=''"><option value="">Ações</option><option value="pagar" :disabled="isViewer">Pagar</option><option value="recibo" :disabled="isViewer || Number(s.paidValue||0)<=0" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></option><option value="duplicar" :disabled="isViewer">Duplicar</option><option value="excluir" :disabled="isViewer">Excluir</option></select></td></tr></template></tbody></table></div></div>
+        </section>
+
+
+        <section x-show="view==='pagamentos'" class="space-y-4">
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.22em] text-rc-gold font-black">Central financeira</p>
+                <h3 class="font-black text-xl">Pagamentos</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Esta guia puxa os lançamentos de Serviços. O pagamento continua sendo registrado pela janela flutuante, sem duplicar dados.</p>
+              </div>
+              <div class="grid sm:grid-cols-3 gap-2 lg:min-w-[620px]">
+                <input x-model="paymentMonthFilter" type="month" class="input">
+                <select x-model="paymentStatusFilter" class="input"><option value="todos">Todos os status</option><option>Pendente</option><option>Parcial</option><option>Pago</option></select>
+                <select x-model="paymentProviderFilter" class="input"><option value="todos">Todos os prestadores</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-2 xl:grid-cols-6 gap-3">
+              <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/60 dark:bg-slate-950/30 p-3"><p class="text-xs uppercase tracking-[.16em] text-slate-500 font-black">Previsto</p><p class="text-xl font-black text-rc-800 dark:text-white" x-text="money(paymentSummary.expected)"></p><p class="text-xs text-slate-500" x-text="filteredPayments.length+' lançamento(s)'"></p></div>
+              <div class="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-emerald-700 font-black">Pago</p><p class="text-xl font-black text-emerald-700" x-text="money(paymentSummary.paid)"></p><p class="text-xs text-emerald-700/80" x-text="paymentSummary.paidCount+' pagamento(s)'"></p></div>
+              <div class="rounded-3xl border border-red-500/20 bg-red-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-red-700 font-black">Em aberto</p><p class="text-xl font-black text-red-700" x-text="money(paymentSummary.open)"></p><p class="text-xs text-red-700/80">pendente/parcial</p></div>
+              <div class="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-3"><p class="text-xs uppercase tracking-[.16em] text-amber-700 font-black">Vencidos</p><p class="text-xl font-black text-amber-700" x-text="paymentSummary.overdue"></p><p class="text-xs text-amber-700/80">fora do prazo</p></div>
+        
+--- occurrence 2 at 6481788 ---
+on:'triangle-alert',bar:'bg-red-600',border:'border-red-500/25',iconBg:'bg-red-600'},warning:{title:'Aviso',icon:'alert-circle',bar:'bg-amber-500',border:'border-amber-500/30',iconBg:'bg-amber-500'},info:{title:'Informação',icon:'info',bar:'bg-rc-800',border:'border-rc-800/25',iconBg:'bg-gradient-to-br from-rc-800 to-rc-500'}}[type]||{};let id=Date.now()+Math.random();this.toasts.push({id,message,type,...cfg});this.refreshIcons();setTimeout(()=>this.dismissToast(id),4200)},dismissToast(id){this.toasts=this.toasts.filter(t=>t.id!==id)},doLogin(){let p=JSON.parse(localStorage.getItem('rc_passwords')||'{"admin":"123456","viewer":"123456"}');if(this.login.password===p[this.login.role]){this.auth={logged:true,role:this.login.role};this.login.password='';this.load();this.after()}else this.toast('Senha inválida','error')},logout(){this.auth={logged:false,role:'viewer'}},go(v){this.view=v;this.after()},toggleDark(){this.dark=!this.dark;localStorage.setItem('rc_dark',this.dark?'1':'0');document.documentElement.classList.toggle('dark',this.dark)},
+  providerAction(action,p){if(!action||!p)return;if(action==='painel')this.selectProvider(p);else if(action==='editar')this.editProvider(p);else if(action==='lancar'){if(!this.isViewer)this.fillServiceFromProvider(p)}else if(action==='whatsapp')this.openWhatsapp(p);else if(action==='excluir'){if(!this.isViewer)this.openDeleteProviderModal(p)}},serviceAction(action,s){if(!action||!s)return;if(action==='pagar'){if(!this.isViewer)this.pay(s)}else if(action==='recibo'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.quickReceipt(s)}else if(action==='duplicar'){if(!this.isViewer)this.openDuplicateModal(s)}else if(action==='excluir'){if(!this.isViewer)this.openDeleteServiceModal(s)}},paymentAction(action,s){if(!action||!s)return;if(action==='pagar'){if(!this.isViewer&&s.status!=='Pago')this.pay(s)}else if(action==='recibo'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.quickReceipt(s)}else if(action==='servico')this.openSearchService(s);else if(action==='excluirPagamento'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.openDeletePaymentModal(s)}},openSearchProvider(p){this.selectedProviderId=p?.id||null;this.view='prestadores';this.after()},openSearchService(s){this.serviceFilter='todos';this.serviceCategoryFilter='todas';this.serviceProviderFilter=String(s.providerId||'todos');this.serviceMonthFilter=s.reference||'';this.view='servicos';this.after()},openSearchReceipt(r){this.currentReceipt=r;this.receiptFilter={q:r.number||'',month:r.reference||'',category:'todas'};this.view='recibos';this.after()},openSearchRecurrence(r){this.recurrenceForm={...r};this.view='servicos';this.after()},selectProvider(p){this.selectedProviderId=p?.id||null;this.after()},providerSortBy(field){if(this.providerSortField===field){this.providerSortDir=this.providerSortDir==='asc'?'desc':'asc';}else{this.providerSortField=field;this.providerSortDir='asc';}},resetProvider(){this.providerForm={id:null,name:'',type:'Autônomo',document:'',category:'Jardineiro',phone:'',whatsapp:'',pix:'',notes:''}},editProvider(p){this.providerForm={...p};this.view='prestadores';this.after()},async saveProvider(){if(this.isViewer)return;let d={...this.providerForm};let doc=String(d.document||'').replace(/\D/g,'');if(doc){let duplicate=this.providers.find(p=>Number(p.id)!==Number(d.id)&&String(p.document||'').replace(/\D/g,'')===doc);if(duplicate)return this.toast('Já existe um prestador cadastrado com este CPF/CNPJ: '+(duplicate.name||'cadastro existente')+'.','warning')}if(d.id){await db.providers.update(d.id,d);await this.logAction('provider','Prestador atualizado',d.name||'Cadastro atualizado')}else{delete d.id;await db.providers.add(d);await this.logAction('provider','Prestador cadastrado',d.name||'Novo prestador')}this.resetProvider();await this.load();this.toast('Prestador salvo')},openDeleteProviderModal(p){if(this.isViewer)return;this.actionModal={open:true,type:'deleteProvider',tone:'danger',icon:'user-x',target:p,service:null,title:'Excluir prestador',subtitle:'Essa ação remove o cadastro do prestador.',note:'Prestadores com lançamentos, recibos ou recorrências vinculadas não podem ser excluídos. Isso preserva a rastreabilidade do histórico.',confirmLabel:'Excluir prestador',details:[{label:'Prestador',value:p.name||'-'},{label:'Categoria',value:p.category||'-'},{label:'Documento',value:p.document||'não informado'}]};this.after()},async removeProviderInternal(id){let p=this.providers.find(x=>Number(x.id)===Number(id));if(!p)return;let linkedServices=this.services.some(s=>Number(s.providerId)===Number(id)),linkedRecei
+COUNT=2
+
+===== paymentAction( =====
+
+--- occurrence 1 at 2193744 ---
+/th></tr></thead>
+                  <tbody>
+                    <template x-for="s in filteredPayments" :key="s.id">
+                      <tr class="border-t border-slate-200/60 dark:border-slate-700/60 hover:bg-emerald-500/5 transition">
+                        <td class="p-3 min-w-[120px]"><b x-text="fmt(s.dueDate)"></b><br><span class="text-xs text-slate-500" x-text="month(s.reference)"></span></td>
+                        <td class="p-3 min-w-[260px]"><b x-text="providerName(s.providerId)"></b><br><span class="badge" x-text="s.category"></span><p class="text-xs text-slate-500 mt-1" x-text="s.description||'-'"></p></td>
+                        <td class="p-3 min-w-[160px]"><b x-text="money(s.amount)"></b><br><span class="text-xs text-emerald-700" x-text="'Pago: '+money(s.paidValue||0)"></span><br><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="'Aberto: '+money(balance(s))"></span></td>
+                        <td class="p-3 min-w-[150px]"><span class="badge" :class="statusClass(s.status)" x-text="s.status"></span><br><span class="text-xs text-slate-500" x-show="s.paymentDate" x-text="fmt(s.paymentDate)+' • '+(s.paymentMethod||'forma não informada')"></span><span class="text-xs text-red-600" x-show="balance(s)>0" x-text="overdueLabel(s)"></span></td>
+                        <td class="p-3 min-w-[150px]"><select class="input py-2 text-xs font-black" @change="paymentAction($event.target.value,s); $event.target.value=''"><option value="">Ações</option><option value="pagar" :disabled="isViewer || s.status==='Pago'">Pagar</option><option value="recibo" :disabled="isViewer || Number(s.paidValue||0)<=0" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></option><option value="servico">Abrir serviço</option><option value="excluirPagamento" :disabled="isViewer || Number(s.paidValue||0)<=0">Excluir pagamento</option></select></td>
+                      </tr>
+                    </template>
+                    <tr x-show="!filteredPayments.length"><td colspan="5" class="p-6 text-center text-slate-500">Nenhum pagamento encontrado para os filtros selecionados.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="glass rounded-3xl p-4 space-y-3">
+              <h3 class="font-black text-lg">Últimos pagamentos</h3>
+              <template x-for="p in paymentRecent" :key="'recent-pay-'+p.id">
+      <div class="rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+        <div class="flex items-start justify-between gap-3"><div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.paymentDate)+' • '+(p.paymentMethod||'forma não informada')"></p></div><p class="font-black text-emerald-700" x-text="money(p.paidValue||0)"></p></div>
+        <div class="flex flex-wrap gap-2 mt-2"><button @click="recentPaymentReceipt(p)" class="mini" :disabled="isViewer || !p.service" x-text="p.receipt?'Ver recibo':'Emitir recibo'"></button><button @click="p.service && openSearchService(p.service)" class="mini" :disabled="!p.service">Serviço</button><button @click="openDeleteSinglePaymentModal(p)" class="danger" :disabled="isViewer || !p.service" title="Exclui somente este pagamento">Excluir pagamento</button></div>
+      </div>
+    </template>
+              <p x-show="!paymentRecent.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado ainda.</p>
+            </div>
+          </div>
+        </section>
+
+        <section x-show="view==='recibos'" class="space-y-4">
+          <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-emerald-600 dark:text-emerald-400 font-black">Emissão</p>
+                <h3 class="font-black text-lg">Emitir recibo profissional</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Selecione um serviço/pagamento já lançado para gerar o recibo formal.</p>
+              </div>
+              <div class="rounded-2xl px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 text-sm">
+                <b x-text="receipts.length"></b> recibos no histórico
+              </div>
+            </div>
+            <div class="grid lg:grid-cols-[1fr_auto] gap-3 items-end">
+              <label>
+                <span class="text-sm font-bold">Lançamento para emissão</span>
+                <select x-model="rec
+--- occurrence 2 at 6482130 ---
+ id=Date.now()+Math.random();this.toasts.push({id,message,type,...cfg});this.refreshIcons();setTimeout(()=>this.dismissToast(id),4200)},dismissToast(id){this.toasts=this.toasts.filter(t=>t.id!==id)},doLogin(){let p=JSON.parse(localStorage.getItem('rc_passwords')||'{"admin":"123456","viewer":"123456"}');if(this.login.password===p[this.login.role]){this.auth={logged:true,role:this.login.role};this.login.password='';this.load();this.after()}else this.toast('Senha inválida','error')},logout(){this.auth={logged:false,role:'viewer'}},go(v){this.view=v;this.after()},toggleDark(){this.dark=!this.dark;localStorage.setItem('rc_dark',this.dark?'1':'0');document.documentElement.classList.toggle('dark',this.dark)},
+  providerAction(action,p){if(!action||!p)return;if(action==='painel')this.selectProvider(p);else if(action==='editar')this.editProvider(p);else if(action==='lancar'){if(!this.isViewer)this.fillServiceFromProvider(p)}else if(action==='whatsapp')this.openWhatsapp(p);else if(action==='excluir'){if(!this.isViewer)this.openDeleteProviderModal(p)}},serviceAction(action,s){if(!action||!s)return;if(action==='pagar'){if(!this.isViewer)this.pay(s)}else if(action==='recibo'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.quickReceipt(s)}else if(action==='duplicar'){if(!this.isViewer)this.openDuplicateModal(s)}else if(action==='excluir'){if(!this.isViewer)this.openDeleteServiceModal(s)}},paymentAction(action,s){if(!action||!s)return;if(action==='pagar'){if(!this.isViewer&&s.status!=='Pago')this.pay(s)}else if(action==='recibo'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.quickReceipt(s)}else if(action==='servico')this.openSearchService(s);else if(action==='excluirPagamento'){if(!this.isViewer&&Number(s.paidValue||0)>0)this.openDeletePaymentModal(s)}},openSearchProvider(p){this.selectedProviderId=p?.id||null;this.view='prestadores';this.after()},openSearchService(s){this.serviceFilter='todos';this.serviceCategoryFilter='todas';this.serviceProviderFilter=String(s.providerId||'todos');this.serviceMonthFilter=s.reference||'';this.view='servicos';this.after()},openSearchReceipt(r){this.currentReceipt=r;this.receiptFilter={q:r.number||'',month:r.reference||'',category:'todas'};this.view='recibos';this.after()},openSearchRecurrence(r){this.recurrenceForm={...r};this.view='servicos';this.after()},selectProvider(p){this.selectedProviderId=p?.id||null;this.after()},providerSortBy(field){if(this.providerSortField===field){this.providerSortDir=this.providerSortDir==='asc'?'desc':'asc';}else{this.providerSortField=field;this.providerSortDir='asc';}},resetProvider(){this.providerForm={id:null,name:'',type:'Autônomo',document:'',category:'Jardineiro',phone:'',whatsapp:'',pix:'',notes:''}},editProvider(p){this.providerForm={...p};this.view='prestadores';this.after()},async saveProvider(){if(this.isViewer)return;let d={...this.providerForm};let doc=String(d.document||'').replace(/\D/g,'');if(doc){let duplicate=this.providers.find(p=>Number(p.id)!==Number(d.id)&&String(p.document||'').replace(/\D/g,'')===doc);if(duplicate)return this.toast('Já existe um prestador cadastrado com este CPF/CNPJ: '+(duplicate.name||'cadastro existente')+'.','warning')}if(d.id){await db.providers.update(d.id,d);await this.logAction('provider','Prestador atualizado',d.name||'Cadastro atualizado')}else{delete d.id;await db.providers.add(d);await this.logAction('provider','Prestador cadastrado',d.name||'Novo prestador')}this.resetProvider();await this.load();this.toast('Prestador salvo')},openDeleteProviderModal(p){if(this.isViewer)return;this.actionModal={open:true,type:'deleteProvider',tone:'danger',icon:'user-x',target:p,service:null,title:'Excluir prestador',subtitle:'Essa ação remove o cadastro do prestador.',note:'Prestadores com lançamentos, recibos ou recorrências vinculadas não podem ser excluídos. Isso preserva a rastreabilidade do histórico.',confirmLabel:'Excluir prestador',details:[{label:'Prestador',value:p.name||'-'},{label:'Categoria',value:p.category||'-'},{label:'Documento',value:p.document||'não informado'}]};this.after()},async removeProviderInternal(id){let p=this.providers.find(x=>Number(x.id)===Number(id));if(!p)return;let linkedServices=this.services.some(s=>Number(s.providerId)===Number(id)),linkedReceipts=this.receipts.some(r=>Number(r.providerId)===Number(id)),linkedRecurrences=(this.recurrences||[]).some(r=>Number(r.providerId)===Number(id));if(linkedServices||linkedReceipts||linkedRecurrences){return this.toast('Este prestador possui histórico ou recorrência vinculada e não pode ser excluído. Mantenha o cadastro para preservar a rastr
+COUNT=2
