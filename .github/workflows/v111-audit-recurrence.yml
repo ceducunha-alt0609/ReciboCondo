@@ -1,4 +1,4 @@
-name: v111 audit recurrence semantics
+name: v111 recurrence date separation
 on:
   push:
     branches: [ main ]
@@ -7,28 +7,61 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract recurrence form and routines
+      - name: Separate service due and planned payment days
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          keys=['resetRecurrence(){','async saveRecurrence(){','async generateRecurrence(','async generateAllRecurrencesForMonth(){','paymentDay','dueDay','recurrenceForm']
-          out=[]
-          for k in keys:
-              i=s.find(k)
-              out.append('\n===== '+k+' =====\n')
-              if i<0:
-                  out.append('NOT FOUND\n')
-                  continue
-              out.append(s[max(0,i-2500):i+8000])
-          Path('v111-recurrence-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          old="resetRecurrence(){this.recurrenceForm={id:null,providerId:'',category:'Jardineiro',amount:0,dueDay:5,paymentDay:5,paymentMethod:'PIX',location:'',description:'',active:true}},editRecurrence(r){this.recurrenceForm={...r};this.view='servicos';this.after()}"
+          new="resetRecurrence(){this.recurrenceForm={id:null,providerId:'',category:'Jardineiro',amount:0,serviceDay:5,dueDay:5,paymentDay:5,paymentMethod:'PIX',location:'',description:'',active:true}},editRecurrence(r){this.recurrenceForm={...r,serviceDay:Number(r.serviceDay||r.paymentDay||r.dueDay||1)};this.view='servicos';this.after()}"
+          assert s.count(old)==1, f'reset/edit anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+
+          old="let d={...this.recurrenceForm,providerId:Number(this.recurrenceForm.providerId),amount:Number(this.recurrenceForm.amount||0),dueDay:Number(this.recurrenceForm.dueDay||1),paymentDay:Number(this.recurrenceForm.paymentDay||this.recurrenceForm.dueDay||1),active:!!this.recurrenceForm.active};"
+          new="let d={...this.recurrenceForm,providerId:Number(this.recurrenceForm.providerId),amount:Number(this.recurrenceForm.amount||0),serviceDay:Number(this.recurrenceForm.serviceDay||this.recurrenceForm.paymentDay||this.recurrenceForm.dueDay||1),dueDay:Number(this.recurrenceForm.dueDay||1),paymentDay:Number(this.recurrenceForm.paymentDay||this.recurrenceForm.dueDay||1),active:!!this.recurrenceForm.active};"
+          assert s.count(old)==1, f'save recurrence anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+
+          old="serviceDate:this.dateForDay(ref,r.paymentDay||r.dueDay),dueDate:this.dateForDay(ref,r.dueDay)"
+          new="serviceDate:this.dateForDay(ref,r.serviceDay||r.paymentDay||r.dueDay),dueDate:this.dateForDay(ref,r.dueDay)"
+          assert s.count(old)==1, f'generate one anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+
+          old="serviceDate:this.dateForDay(this.today().slice(0,7),r.paymentDay||r.dueDay),dueDate:this.dateForDay(this.today().slice(0,7),r.dueDay)"
+          new="serviceDate:this.dateForDay(this.today().slice(0,7),r.serviceDay||r.paymentDay||r.dueDay),dueDate:this.dateForDay(this.today().slice(0,7),r.dueDay)"
+          assert s.count(old)==1, f'generate all anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+
+          old='<div class="grid md:grid-cols-4 gap-3">\n                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>\n                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>\n                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>\n                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>\n              </div>'
+          new='<div class="grid md:grid-cols-5 gap-3">\n                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>\n                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>\n                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>\n                <label><span class="text-sm font-bold">Dia do serviço</span><input x-model.number="recurrenceForm.serviceDay" type="number" min="1" max="31" required class="input mt-1"></label>\n                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>\n              </div>'
+          assert s.count(old)==1, f'form first row anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+
+          old="x-text=\"r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)\""
+          new="x-text=\"r.category+' • serv. dia '+(r.serviceDay||r.paymentDay||r.dueDay)+' • venc. dia '+r.dueDay+' • '+money(r.amount)\""
+          assert s.count(old)==1, f'recurrence card summary count={s.count(old)}'
+          s=s.replace(old,new,1)
+
+          assert 'recurrenceForm.serviceDay' in s
+          assert 'r.serviceDay||r.paymentDay||r.dueDay' in s
+          p.write_text(s,encoding='utf-8')
+
+          sw=Path('sw.js')
+          w=sw.read_text(encoding='utf-8')
+          w2,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v111-recurrence-date-separation'",w,count=1)
+          assert n==1
+          sw.write_text(w2,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v111-recurrence-audit.txt
-          git commit -m 'v111: capture recurrence semantics audit'
+          git add index.html sw.js
+          git rm -f v111-recurrence-audit.txt v111-recurrence-labels.txt .github/workflows/v111-audit-recurrence.yml .github/workflows/v111-inspect-recurrence-labels.yml || true
+          git commit -m 'v111: separate recurrence service due and payment days'
           git push
