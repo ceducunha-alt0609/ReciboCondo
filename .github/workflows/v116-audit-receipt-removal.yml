@@ -1,4 +1,4 @@
-name: v116 receipt deletion safety
+name: v116 receipt deletion safety retry
 on:
   push:
     branches: [ main ]
@@ -11,21 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Allow exact receipt deletion while preserving payment
+      - name: Patch exact receipt deletion safely
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           p=Path('index.html'); s=p.read_text(encoding='utf-8')
           start=s.find('async removeReceiptInternal(id){'); assert start>=0
-          end=s.find(',async removeRecurrenceInternal',start); assert end>=0
+          end=s.find('async removeRecurrenceInternal',start); assert end>=0
           old=s[start:end]
-          assert "Só é possível excluir o recibo mais recente" in old, 'expected latest-receipt restriction not found'
-          assert 'db.payments.update(payment.id,{receiptId:null})' in old, 'payment unlink missing in old routine'
-          new="""async removeReceiptInternal(id){let r=this.receipts.find(x=>Number(x.id)===Number(id));if(!r)return;let payment=this.payments.find(p=>Number(p.receiptId)===Number(r.id)||Number(p.id)===Number(r.paymentId));await db.transaction('rw',db.receipts,db.payments,async()=>{await db.receipts.delete(id);if(payment&&Number(payment.receiptId)===Number(r.id))await db.payments.update(payment.id,{receiptId:null})});await this.logAction('delete','Recibo excluído; pagamento preservado','Nº '+r.number+' • '+(r.providerName||this.providerName(r.providerId))+' • '+this.money(r.total||0));await this.load();this.toast('Recibo nº '+r.number+' excluído. O pagamento correspondente foi preservado e pode receber novo recibo.') }"""
+          assert 'latest' in old.lower() or 'mais recente' in old.lower(), old[:1200]
+          new="""async removeReceiptInternal(id){let r=this.receipts.find(x=>Number(x.id)===Number(id));if(!r)return;let payment=this.payments.find(p=>Number(p.receiptId)===Number(r.id)||Number(p.id)===Number(r.paymentId));await db.transaction('rw',db.receipts,db.payments,async()=>{await db.receipts.delete(id);if(payment&&Number(payment.receiptId)===Number(r.id))await db.payments.update(payment.id,{receiptId:null})});await this.logAction('delete','Recibo excluído; pagamento preservado','Nº '+r.number+' • '+(r.providerName||this.providerName(r.providerId))+' • '+this.money(r.total||0));await this.load();this.toast('Recibo nº '+r.number+' excluído. O pagamento correspondente foi preservado e pode receber novo recibo.')},"""
           s=s[:start]+new+s[end:]
-          assert "Só é possível excluir o recibo mais recente" not in s[start:start+2200]
-          assert "Recibo excluído; pagamento preservado" in s
+          assert 'Recibo excluído; pagamento preservado' in s
           p.write_text(s,encoding='utf-8')
           sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v116-exact-receipt-deletion'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
