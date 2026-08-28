@@ -1,4 +1,4 @@
-name: v126 refine paid ranking call sites
+name: v126 remove dead paid ranking helper
 on:
   push:
     branches: [ main ]
@@ -7,30 +7,26 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture concise call sites
+      - name: Remove unused paidValue ranking helper
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          out=[]
-          for term in ['topPaidNames(', 'providerSpend(']:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'#{n} at {i}\n{s[max(0,i-450):i+900]}\n')
-                  start=i+len(term)
-              out.append(f'COUNT={n}\n')
-          Path('v126-provider-spend-rankings-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old="topPaidNames(rows){let map={};rows.forEach(s=>{let v=Number(s.paidValue||0);if(v<=0)return;let name=this.providerName(s.providerId);map[name]=(map[name]||0)+v});return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([name,total])=>name+' • '+this.money(total))},"
+          assert s.count(old)==1
+          s=s.replace(old,'',1)
+          assert 'topPaidNames(' not in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v126-remove-dead-paid-ranking'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v126-provider-spend-rankings-audit.txt
-          git commit -m 'v126: refine paid ranking call-site audit'
+          git add index.html sw.js
+          git rm .github/workflows/v126-audit-provider-spend-rankings.yml v126-provider-spend-rankings-audit.txt
+          git commit -m 'v126: remove unused paidValue ranking helper'
           git push
