@@ -776,7 +776,7 @@ padding:2px!important;
                         <p class="text-xs text-slate-500" x-text="month(s.reference)+' • '+(s.description || 'sem descrição')"></p>
                       </div>
                       <div class="text-left md:text-right">
-                        <b x-text="money(s.paidValue || s.amount)"></b>
+                        <b x-text="money(s.amount)"></b>
                         <p class="text-xs" :class="s.status==='Pago'?'text-emerald-600':s.status==='Parcial'?'text-amber-600':'text-red-600'" x-text="s.status"></p>
                       </div>
                     </div>
