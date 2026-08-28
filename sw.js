@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v107-report-chart-bars-reactive';
+const CACHE_NAME = 'recibocondo-v108-annual-payment-chart';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
