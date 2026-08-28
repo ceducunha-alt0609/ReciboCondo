@@ -1,0 +1,33 @@
+name: v111 inspect recurrence labels
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v111-inspect-recurrence-labels.yml'
+permissions:
+  contents: write
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract recurrence field labels
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          out=[]
+          for k in ['x-model.number="recurrenceForm.paymentDay"','x-model.number="recurrenceForm.dueDay"','recurrenceForm.paymentMethod']:
+              start=0
+              while True:
+                  i=s.find(k,start)
+                  if i<0: break
+                  out.append('\n===== '+k+' =====\n'+s[max(0,i-1800):i+2200])
+                  start=i+1
+          Path('v111-recurrence-labels.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v111-recurrence-labels.txt
+          git commit -m 'v111: capture recurrence form labels'
+          git push
