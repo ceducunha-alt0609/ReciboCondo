@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v118-ledger-paid-summaries';
+const CACHE_NAME = 'recibocondo-v119-local-calendar-defaults';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
