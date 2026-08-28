@@ -1,4 +1,4 @@
-name: v113 audit receipt number behavior
+name: v113 inspect exact receipt methods
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,25 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract receipt number and receipt action routines
+      - name: Print exact receipt method definitions
         run: |
           python - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text(encoding='utf-8')
-          keys=['reportReceiptNumber(','quickReceipt(','recentPaymentReceipt(','issueReceipt(','openReceipt(','serviceAction(','paymentAction(']
-          out=[]
-          for k in keys:
-              out.append('\n===== '+k+' =====\n')
-              start=0;n=0
+          for term in ['reportReceiptNumber','quickReceipt','recentPaymentReceipt','issueReceipt']:
+              print('\n===== '+term+' =====')
+              start=0; occ=[]
               while True:
-                  i=s.find(k,start)
+                  i=s.find(term,start)
                   if i<0: break
-                  n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1400):i+3200])
-                  start=i+len(k)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v113-receipt-number-audit.txt').write_text(''.join(out),encoding='utf-8')
+                  occ.append(i); start=i+len(term)
+              print('COUNT',len(occ),'POSITIONS',occ)
+              for i in occ:
+                  left=max(0,i-220)
+                  right=min(len(s),i+1000)
+                  print('\n---',i,'---\n'+s[left:right])
           PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v113-receipt-number-audit.txt
-          git commit -m 'v113: capture receipt number audit'
-          git push
