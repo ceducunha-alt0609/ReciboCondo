@@ -1,4 +1,4 @@
-name: v134 trace receipt payment id
+name: v134 inspect recent payment getter
 on:
   push:
     branches: [ main ]
@@ -11,22 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Trace payment event ids into receipt issuance
+      - name: Capture paymentRecent and servicePanelPaymentEvents getters
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           s=Path('index.html').read_text(encoding='utf-8')
-          terms=['recentPaymentReceipt(','servicePanelPaymentEvents','recentPayments','paymentEvents','issueReceipt(p.id)','@click="recentPaymentReceipt','receiptPaymentIds']
           out=[]
-          for term in terms:
-              poss=[m.start() for m in re.finditer(re.escape(term),s)]
-              out.append(f'\n=== {term} count={len(poss)} ===\n')
-              for i in poss[:20]: out.append(s[max(0,i-1800):i+2600]+'\n---\n')
+          for needle in ['get paymentRecent(){','get servicePanelPaymentEvents(){']:
+              i=s.find(needle)
+              out.append('\n=== '+needle+' at '+str(i)+' ===\n')
+              if i>=0: out.append(s[i:i+5000]+'\n')
           Path('v134-future-receipt-audit.txt').write_text(''.join(out),encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add v134-future-receipt-audit.txt
-          git commit -m 'v134: trace receipt payment id flow'
+          git commit -m 'v134: inspect recent payment getter'
           git push
