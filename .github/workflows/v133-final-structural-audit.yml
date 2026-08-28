@@ -1,4 +1,4 @@
-name: v133 final structural audit
+name: v133 refine provider paid display
 on:
   push:
     branches: [ main ]
@@ -11,88 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run broad structural checks
+      - name: Capture exact provider display context
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           s=Path('index.html').read_text(encoding='utf-8')
-          out=[]
-
-          # 1) Direct UTC calendar conversions still present near date logic.
-          iso=[m.start() for m in re.finditer(r'toISOString\(\)\.slice\(0,(?:7|10)\)',s)]
-          out.append(f'UTC_CALENDAR_SLICE_COUNT={len(iso)}\n')
-          for i in iso[:20]: out.append('UTC_CONTEXT\n'+s[max(0,i-500):i+800]+'\n')
-
-          # 2) Demo markers / obvious old seed remnants.
-          demo_terms=['Condomínio Exemplo','CNPJ 00.000.000/0001-00','Endereço do condomínio','Síndico/Tesoureiro','demo','seedDemo','prestador demo']
-          for t in demo_terms:
-              c=s.lower().count(t.lower())
-              out.append(f'DEMO_TERM {t!r} COUNT={c}\n')
-
-          # 3) paidValue fallback to amount, historically dangerous.
-          patterns=[r'paidValue\s*\|\|\s*[^,;)]+amount',r'Number\([^)]*paidValue[^)]*\|\|[^)]*amount',r'paidValue\s*\?\?\s*[^,;)]+amount']
-          for p in patterns:
-              ms=list(re.finditer(p,s))
-              out.append(f'PAID_FALLBACK {p} COUNT={len(ms)}\n')
-              for m in ms[:10]: out.append(s[max(0,m.start()-450):m.end()+700]+'\n')
-
-          # 4) Destructive writes contexts.
-          for term in ['.clear()','.delete(','db.settings.put(','db.meta.put(','bulkAdd(','bulkPut(']:
-              poss=[m.start() for m in re.finditer(re.escape(term),s)]
-              out.append(f'WRITE_TERM {term} COUNT={len(poss)}\n')
-              for i in poss[:30]: out.append(s[max(0,i-500):i+1000]+'\n')
-
-          # 5) Duplicate top-level app members using root object splitter.
-          start=s.index('function app(){return{')+len('function app(){return{')
-          i=start; dc=1; dp=db=0; quote=None; esc=False; line=False; block=False; seg=start; parts=[]
-          while i<len(s):
-              c=s[i]; n=s[i+1] if i+1<len(s) else ''
-              if line:
-                  if c=='\n': line=False
-                  i+=1; continue
-              if block:
-                  if c=='*' and n=='/': block=False; i+=2; continue
-                  i+=1; continue
-              if quote:
-                  if esc: esc=False
-                  elif c=='\\': esc=True
-                  elif c==quote: quote=None
-                  i+=1; continue
-              if c=='/' and n=='/': line=True; i+=2; continue
-              if c=='/' and n=='*': block=True; i+=2; continue
-              if c in "'\"`": quote=c; i+=1; continue
-              if c=='{': dc+=1
-              elif c=='}':
-                  dc-=1
-                  if dc==0: parts.append(s[seg:i]); break
-              elif c=='(': dp+=1
-              elif c==')': dp-=1
-              elif c=='[': db+=1
-              elif c==']': db-=1
-              elif c==',' and dc==1 and dp==0 and db==0:
-                  parts.append(s[seg:i]); seg=i+1
-              i+=1
-          names=[]
-          for p in parts:
-              t=p.strip()
-              m=re.match(r'(?:get\s+|set\s+|async\s+)?([A-Za-z_$][\w$]*)\s*(?:\([^)]*\)\s*\{|:)',t)
-              if m: names.append(m.group(1))
-          dup=sorted({n for n in names if names.count(n)>1})
-          out.append(f'TOP_LEVEL_MEMBERS={len(names)}\nDUPLICATE_TOP_LEVEL={len(dup)} {dup}\n')
-
-          # 6) Temp audit artifacts visible in root/workflows.
-          root=[p.name for p in Path('.').iterdir() if p.is_file() and ('audit' in p.name.lower() or 'v1' in p.name.lower())]
-          wf=[]
-          wfd=Path('.github/workflows')
-          if wfd.exists(): wf=[p.name for p in wfd.iterdir() if p.is_file()]
-          out.append('ROOT_AUDITISH_FILES='+repr(root)+'\n')
-          out.append('WORKFLOWS='+repr(wf)+'\n')
-
-          Path('v133-final-structural-audit.txt').write_text(''.join(out),encoding='utf-8')
+          needle='money(s.paidValue || s.amount)'
+          assert s.count(needle)==1
+          i=s.index(needle)
+          Path('v133-final-structural-audit.txt').write_text(s[max(0,i-4200):i+4200],encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add v133-final-structural-audit.txt
-          git commit -m 'v133: capture final structural audit'
+          git commit -m 'v133: refine provider paid display audit'
           git push
