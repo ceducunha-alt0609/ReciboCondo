@@ -1,0 +1,38 @@
+name: v119 audit UTC calendar dates
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v119-audit-utc-calendar-dates.yml'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture direct UTC calendar date conversions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          terms=["toISOString().slice(0,10)","toISOString().substring(0,10)","new Date().toISOString()","report:{from:","servicePanelMonth:"]
+          out=[]
+          for term in terms:
+              out.append('\n===== '+term+' =====\n')
+              start=0;n=0
+              while True:
+                  i=s.find(term,start)
+                  if i<0: break
+                  n+=1
+                  out.append(f'\n--- occurrence {n} at {i} ---\n')
+                  out.append(s[max(0,i-1300):i+2800])
+                  start=i+len(term)
+              out.append(f'\nCOUNT={n}\n')
+          Path('v119-utc-calendar-date-audit.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v119-utc-calendar-date-audit.txt
+          git commit -m 'v119: capture UTC calendar date audit'
+          git push
