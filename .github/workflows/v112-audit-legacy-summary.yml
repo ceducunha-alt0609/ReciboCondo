@@ -1,4 +1,4 @@
-name: v112 service panel payment ledger
+name: v112 service panel payment ledger retry
 on:
   push:
     branches: [ main ]
@@ -17,31 +17,23 @@ jobs:
           from pathlib import Path
           import re
           p=Path('index.html'); s=p.read_text(encoding='utf-8')
-          old='''<template x-for="s in servicePanelPaidRows.slice(0,5)" :key="s.id">
-                    <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
-                      <div><p class="font-black text-sm" x-text="providerName(s.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(s.paymentDate)+' • '+s.category+' • '+(s.paymentMethod||'forma não informada')"></p></div>
-                      <div class="text-right"><p class="font-black text-emerald-700" x-text="money(s.paidValue||0)"></p><button @click="quickReceipt(s)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></button></div>
-                    </div>
-                  </template>'''
-          new='''<template x-for="p in servicePanelPaymentEvents.slice(0,5)" :key="'panel-pay-'+p.id">
+          s,n=re.subn(r'<template x-for="s in servicePanelPaidRows\.slice\(0,5\)" :key="s\.id">\s*<div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">\s*<div><p class="font-black text-sm" x-text="providerName\(s\.providerId\)"></p><p class="text-xs text-slate-500" x-text="fmt\(s\.paymentDate\)\+' • '\+s\.category\+' • '\+\(s\.paymentMethod\|\|'forma não informada'\)"></p></div>\s*<div class="text-right"><p class="font-black text-emerald-700" x-text="money\(s\.paidValue\|\|0\)"></p><button @click="quickReceipt\(s\)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber\(s\)==='-'\?'Emitir recibo':'Ver recibo'"></button></div>\s*</div>\s*</template>', '''<template x-for="p in servicePanelPaymentEvents.slice(0,5)" :key="'panel-pay-'+p.id">
                     <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
                       <div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.date)+' • '+(p.service?.category||'Sem categoria')+' • '+(p.method||'forma não informada')"></p></div>
                       <div class="text-right"><p class="font-black text-emerald-700" x-text="money(p.amount||0)"></p><button @click="p.service && quickReceipt(p.service)" class="mini" :disabled="isViewer || !p.service" x-text="p.receiptId?'Ver recibo':'Emitir recibo'"></button></div>
                     </div>
-                  </template>'''
-          assert s.count(old)==1, f'panel template count={s.count(old)}'
-          s=s.replace(old,new,1)
-          s=s.replace('x-show="!servicePanelPaidRows.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>','x-show="!servicePanelPaymentEvents.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>',1)
-          anchor='get servicePanelPaidRows(){'
-          i=s.find(anchor); assert i>=0
-          j=s.find('},',i); assert j>=0
-          insert="\n      get servicePanelPaymentEvents(){let ref=this.servicePanelMonth;return this.payments.map(p=>({...p,service:this.services.find(s=>s.id==p.serviceId)})).filter(p=>p.date&&p.date.slice(0,7)===ref).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||Number(b.id||0)-Number(a.id||0))},"
-          s=s[:j+2]+insert+s[j+2:]
-          assert 'servicePanelPaymentEvents' in s
+                  </template>''',s,count=1)
+          assert n==1, f'template replacements={n}'
+          old='x-show="!servicePanelPaidRows.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>'
+          assert old in s; s=s.replace(old,'x-show="!servicePanelPaymentEvents.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>',1)
+          marker='get servicePanelPaidRows(){'
+          i=s.find(marker); assert i>=0
+          nxt=s.find('\n      get ',i+len(marker)); assert nxt>=0
+          getter="\n      get servicePanelPaymentEvents(){let ref=this.servicePanelMonth;return this.payments.map(p=>({...p,service:this.services.find(s=>s.id==p.serviceId)})).filter(p=>p.date&&p.date.slice(0,7)===ref).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||Number(b.id||0)-Number(a.id||0))},"
+          s=s[:nxt]+getter+s[nxt:]
+          assert s.count('get servicePanelPaymentEvents(){')==1
           p.write_text(s,encoding='utf-8')
-          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8')
-          w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v112-monthly-payment-ledger'",w,count=1); assert n==1
-          sw.write_text(w,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v112-monthly-payment-ledger'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
