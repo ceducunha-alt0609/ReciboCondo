@@ -1,0 +1,70 @@
+name: v108 annual payment chart
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v108-annual-payment-chart.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch annual fixed payment chart
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          # 1) Independent chart year state, initialized from current report year.
+          anchor="report:{from:"
+          i=s.find(anchor)
+          assert i!=-1, 'report state anchor not found'
+          # insert a separate state property immediately before report
+          s=s[:i]+"reportChartYear:new Date().getFullYear(),"+s[i:]
+
+          # 2) Add compact year selector to the report chart header.
+          old='<h3 class="font-black mb-3">Relatório de pagamentos</h3><div class="report-chart-box"><canvas id="repChart"></canvas></div>'
+          new='<div class="flex items-center justify-between gap-3 mb-3"><div><h3 class="font-black">Pagamentos no ano</h3><p class="text-xs text-slate-500">Visão anual independente dos filtros do relatório</p></div><label class="flex items-center gap-2 text-sm font-bold">Ano <select x-model.number="reportChartYear" @change="$nextTick(()=>renderCharts())" class="input py-2 w-28"><template x-for="y in reportChartYears" :key="y"><option :value="y" x-text="y"></option></template></select></label></div><div class="report-chart-box"><canvas id="repChart"></canvas></div>'
+          assert s.count(old)==1, f'chart header anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+
+          # 3) Add available-year getter based on payment ledger, always including current selected year.
+          anchor2='get reportRows(){'
+          assert s.count(anchor2)==1, 'reportRows getter anchor unexpected'
+          getter="get reportChartYears(){let ys=[...new Set(this.payments.map(p=>Number(String(p.date||'').slice(0,4))).filter(Boolean))];ys.push(Number(this.reportChartYear||new Date().getFullYear()));return[...new Set(ys)].sort((a,b)=>b-a)},"
+          s=s.replace(anchor2,getter+anchor2,1)
+
+          # 4) Replace report chart data source: Jan-Dec fixed, paid-only, independent from report filters.
+          oldfrag="let launchMonths=this.reportRows.map(s=>String(s.serviceDate||'').slice(0,7)).filter(Boolean),paidMonths=this.reportDetailRows.filter(s=>Number(s.reportValue||0)>0).map(s=>String(s.paymentDate||'').slice(0,7)).filter(Boolean),months=[...new Set([...launchMonths,...paidMonths])].sort(), er=document.getElementById('repChart');if(er){if(this.charts.rep){this.charts.rep.destroy();this.charts.rep=null}er.removeAttribute('height');er.removeAttribute('width');er.style.height='240px';er.style.maxHeight='240px';er.style.width='100%';this.charts.rep=new Chart(er,{type:'bar',data:{labels:months.map(m=>this.month(m)),datasets:[{label:'Lançado',data:months.map(m=>this.reportRows.filter(s=>String(s.serviceDate||'').slice(0,7)===m).reduce((a,s)=>a+Number(s.amount||0),0))},{label:'Pago',data:months.map(m=>this.reportDetailRows.filter(s=>String(s.paymentDate||'').slice(0,7)===m).reduce((a,s)=>a+Number(s.reportValue||0),0))}]},options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}})}}"
+          if oldfrag not in s:
+              # tolerate v106 line-chart form if v107 not present yet in checkout history
+              oldfrag="let launchMonths=this.reportRows.map(s=>String(s.serviceDate||'').slice(0,7)).filter(Boolean),paidMonths=this.reportDetailRows.filter(s=>Number(s.reportValue||0)>0).map(s=>String(s.paymentDate||'').slice(0,7)).filter(Boolean),months=[...new Set([...launchMonths,...paidMonths])].sort(), er=document.getElementById('repChart');if(er){if(this.charts.rep){this.charts.rep.destroy();this.charts.rep=null}er.removeAttribute('height');er.removeAttribute('width');er.style.height='240px';er.style.maxHeight='240px';er.style.width='100%';this.charts.rep=new Chart(er,{type:'line',data:{labels:months.map(m=>this.month(m)),datasets:[{label:'Lançado',data:months.map(m=>this.reportRows.filter(s=>String(s.serviceDate||'').slice(0,7)===m).reduce((a,s)=>a+Number(s.amount||0),0)),tension:.35},{label:'Pago',data:months.map(m=>this.reportDetailRows.filter(s=>String(s.paymentDate||'').slice(0,7)===m).reduce((a,s)=>a+Number(s.reportValue||0),0)),tension:.35}]},options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}})}}"
+          assert oldfrag in s, 'report chart render fragment not found'
+          newfrag="let chartYear=Number(this.reportChartYear||new Date().getFullYear()),months=Array.from({length:12},(_,i)=>String(chartYear)+'-'+String(i+1).padStart(2,'0')),paidByMonth=months.map(m=>this.payments.filter(p=>String(p.date||'').slice(0,7)===m).reduce((a,p)=>a+Number(p.amount||0),0)),er=document.getElementById('repChart');if(er){if(this.charts.rep){this.charts.rep.destroy();this.charts.rep=null}er.removeAttribute('height');er.removeAttribute('width');er.style.height='240px';er.style.maxHeight='240px';er.style.width='100%';this.charts.rep=new Chart(er,{type:'bar',data:{labels:months.map(m=>this.month(m).replace(' de '+chartYear,'')),datasets:[{label:'Pago',data:paidByMonth}]},options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:(ctx)=>'Pago: '+this.money(ctx.raw||0)}}},scales:{y:{beginAtZero:true}}}})}}"
+          s=s.replace(oldfrag,newfrag,1)
+
+          # 5) Cache bump.
+          sw=Path('sw.js')
+          w=sw.read_text(encoding='utf-8')
+          import re
+          w2,n=re.subn(r"recibocondo-v\d+[-a-z0-9]*","recibocondo-v108-annual-payment-chart",w,count=1)
+          assert n==1, 'cache name not replaced'
+          sw.write_text(w2,encoding='utf-8')
+
+          # Verification
+          assert 'reportChartYear:new Date().getFullYear()' in s
+          assert 'get reportChartYears()' in s
+          assert 'Pagamentos no ano' in s
+          assert "Array.from({length:12}" in s
+          assert "datasets:[{label:'Pago',data:paidByMonth}]" in s
+          p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js
+          git rm -f .github/workflows/v108-annual-payment-chart.yml .github/workflows/v107-report-chart-bars.yml || true
+          git commit -m 'v108: make report chart annual payments overview'
+          git push
