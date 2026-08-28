@@ -1,4 +1,4 @@
-name: v126 audit provider spend rankings
+name: v126 refine paid ranking call sites
 on:
   push:
     branches: [ main ]
@@ -11,28 +11,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture provider spend and paid ranking semantics
+      - name: Capture concise call sites
         run: |
           python - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text(encoding='utf-8')
-          terms=['providerSpend(id)','topPaidNames(','providerSpend(','topPaidNames(','paidValue','annualTopProviders','yearlyPaymentRows']
           out=[]
-          for term in terms:
+          for term in ['topPaidNames(', 'providerSpend(']:
               out.append('\n===== '+term+' =====\n')
               start=0;n=0
               while True:
                   i=s.find(term,start)
                   if i<0: break
                   n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1600):i+3800])
+                  out.append(f'#{n} at {i}\n{s[max(0,i-450):i+900]}\n')
                   start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
+              out.append(f'COUNT={n}\n')
           Path('v126-provider-spend-rankings-audit.txt').write_text(''.join(out),encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add v126-provider-spend-rankings-audit.txt
-          git commit -m 'v126: capture provider spend ranking audit'
+          git commit -m 'v126: refine paid ranking call-site audit'
           git push
