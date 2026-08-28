@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v110-ledger-first-receipts';
+const CACHE_NAME = 'recibocondo-v111-recurrence-date-separation';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
