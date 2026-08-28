@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v116-exact-receipt-deletion';
+const CACHE_NAME = 'recibocondo-v117-remove-bulk-delete';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
