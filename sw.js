@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v125-ledger-monthly-totals';
+const CACHE_NAME = 'recibocondo-v126-remove-dead-paid-ranking';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
