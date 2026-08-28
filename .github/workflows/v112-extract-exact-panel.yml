@@ -1,0 +1,42 @@
+name: v112 extract exact payment panel anchors
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v112-extract-exact-panel.yml'
+permissions:
+  contents: write
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract exact getter and panel block
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          out=[]
+          # Getter: from exact getter start through the next getter/method boundary.
+          g=s.find('get servicePanelPaidRows(){')
+          assert g>=0
+          g2=s.find('\n      get ',g+10)
+          if g2<0:
+              g2=s.find('\n      ',g+10)
+          assert g2>g
+          out.append('===== GETTER =====\n'+s[g:g2]+'\n')
+          # Panel: from heading through empty-state paragraph.
+          h=s.find('Últimos pagamentos do mês')
+          assert h>=0
+          b=s.rfind('<div class="rounded-3xl',0,h)
+          e=s.find('Nenhum pagamento registrado neste mês.</p>',h)
+          assert b>=0 and e>=0
+          e+=len('Nenhum pagamento registrado neste mês.</p>')
+          out.append('\n===== PANEL =====\n'+s[b:e]+'\n')
+          Path('v112-exact-panel.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v112-exact-panel.txt
+          git commit -m 'v112: capture exact payment panel anchors'
+          git push
