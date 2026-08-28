@@ -1,4 +1,4 @@
-name: v110 audit partial payments
+name: v110 ledger-first receipt safety
 on:
   push:
     branches: [ main ]
@@ -7,28 +7,57 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract payment and receipt routines
+      - name: Make partial-payment receipts ledger-first
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          keys=['async savePayment(','quickReceipt(','async issueReceipt(','async removeReceiptInternal(','async removeSinglePaymentInternal(','openDeleteSinglePaymentModal(','openDeletePaymentModal(','confirmActionModal()']
-          out=[]
-          for k in keys:
-              i=s.find(k)
-              out.append('\n===== '+k+' =====\n')
-              if i<0:
-                  out.append('NOT FOUND\n')
-                  continue
-              out.append(s[i:i+7000])
-          Path('v110-partial-payment-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          q1=s.find('async quickReceipt(s){')
+          q2=s.find(',async issueReceipt(',q1)
+          assert q1!=-1 and q2!=-1, 'quickReceipt boundaries not found'
+          old_quick=s[q1:q2]
+          new_quick="""async quickReceipt(s){if(this.isViewer)return;if(Number(s.paidValue||0)<=0)return this.toast('Registre o pagamento antes de emitir o recibo.','warning');let receiptPaymentIds=new Set(this.receipts.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0));if(candidates.length){this.receiptServiceId=s.id;await this.issueReceipt(candidates[0].id);this.view='recibos';this.after();setTimeout(()=>this.printReceipt(),260);return}let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),latest=linked.slice().sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];if(latest){this.currentReceipt=latest;this.view='recibos';this.after();this.toast('Todos os pagamentos registrados já possuem recibo.','warning');setTimeout(()=>this.printReceipt(),220)}else this.toast('Não há pagamento pendente de recibo.','warning')}"""
+          s=s[:q1]+new_quick+s[q2:]
+
+          i1=s.find('async issueReceipt(paymentId=null){')
+          i2=s.find(',printReceipt(){',i1)
+          assert i1!=-1 and i2!=-1, 'issueReceipt boundaries not found'
+          old_issue=s[i1:i2]
+          # Preserve receipt construction semantics; only selection/amount source changes.
+          marker="let receiptTotal="
+          m=old_issue.find(marker)
+          assert m!=-1, 'receipt total marker not found'
+          tail=old_issue[m:]
+          # tail begins with legacy receiptTotal assignment; replace its prefix through desc=
+          desc_pos=tail.find(",desc=")
+          assert desc_pos!=-1, 'description marker not found'
+          tail_after_desc=tail[desc_pos:]
+          head="""async issueReceipt(paymentId=null){if(this.isViewer)return;let s=this.services.find(x=>Number(x.id)===Number(this.receiptServiceId));if(!s)return this.toast('Selecione um lançamento.','warning');let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(s.id)),issued=linked.reduce((a,r)=>a+Number(r.total||0),0),legacyPending=Math.max(0,Number(s.paidValue||0)-issued),receiptPaymentIds=new Set(linked.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.id||0)-Number(b.id||0)),payment=paymentId?(candidates.find(p=>Number(p.id)===Number(paymentId))||null):(candidates[0]||null);if(paymentId&&!payment)return this.toast('Este pagamento já possui recibo ou não está disponível para emissão.','warning');if(!payment&&legacyPending<=0)return this.toast('Todos os pagamentos registrados deste lançamento já possuem recibo.','warning');let receiptTotal=payment?Number(payment.amount||0):legacyPending,paymentDate=payment?.date||s.paymentDate||this.today(),paymentMethod=payment?.method||s.paymentMethod||'Não informado'"""
+          new_issue=head+tail_after_desc
+          s=s[:i1]+new_issue+s[i2:]
+
+          assert 'receiptPaymentIds=new Set' in s
+          assert "candidates=this.payments.filter(p=>Number(p.serviceId)===Number(s.id)&&!p.receiptId" in s
+          assert 'legacyPending' in s
+          assert 'pending=Math.max(0,Number(s.paidValue||0)-issued)' not in s[i1:i1+2500]
+          p.write_text(s,encoding='utf-8')
+
+          sw=Path('sw.js')
+          w=sw.read_text(encoding='utf-8')
+          w2,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v110-ledger-first-receipts'",w,count=1)
+          assert n==1
+          sw.write_text(w2,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v110-partial-payment-audit.txt
-          git commit -m 'v110: capture partial payment audit snippets'
+          git add index.html sw.js
+          git rm -f v110-partial-payment-audit.txt .github/workflows/v110-audit-partial-payments.yml
+          git commit -m 'v110: make partial payment receipts ledger-first'
           git push
