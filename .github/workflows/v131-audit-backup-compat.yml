@@ -1,4 +1,4 @@
-name: v131 audit backup compatibility
+name: v131 restore link validation
 on:
   push:
     branches: [ main ]
@@ -7,31 +7,26 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture backup restore compatibility paths
+      - name: Reject contradictory receipt payment links before restore
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['async backup(','async restore(','restoreBackup','paymentsLedgerV1','receiptSeq','safeSeq','bulkPut(','db.settings.put(','db.meta.put(','data.payments','data.receipts','data.services','legacyPending','source:\'service-migration\'']
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'#{n} at {i}\n{s[max(0,i-1400):i+3400]}\n')
-                  start=i+len(term)
-              out.append(f'COUNT={n}\n')
-          Path('v131-backup-compat-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old="let badPayment=payments.find(x=>(x?.serviceId!==undefined&&x?.serviceId!==null&&!serviceIds.has(String(x.serviceId)))||(x?.providerId!==undefined&&x?.providerId!==null&&!providerIds.has(String(x.providerId))));if(badPayment)throw new Error('O backup contém pagamento sem lançamento ou prestador correspondente.');let total="
+          new="let badPayment=payments.find(x=>(x?.serviceId!==undefined&&x?.serviceId!==null&&!serviceIds.has(String(x.serviceId)))||(x?.providerId!==undefined&&x?.providerId!==null&&!providerIds.has(String(x.providerId))));if(badPayment)throw new Error('O backup contém pagamento sem lançamento ou prestador correspondente.');let invalidPayment=payments.find(x=>!Number.isFinite(Number(x?.amount))||Number(x?.amount)<=0);if(invalidPayment)throw new Error('O backup contém pagamento com valor inválido.');let receiptById=new Map(receipts.filter(x=>x?.id!=null).map(x=>[String(x.id),x])),paymentById=new Map(payments.filter(x=>x?.id!=null).map(x=>[String(x.id),x])),seenReceiptLinks=new Set(),seenPaymentLinks=new Set();for(const pay of payments){if(pay?.receiptId!=null){let rid=String(pay.receiptId);if(seenReceiptLinks.has(rid))throw new Error('O backup vincula mais de um pagamento ao mesmo recibo.');seenReceiptLinks.add(rid);let rec=receiptById.get(rid);if(!rec)throw new Error('O backup contém pagamento apontando para recibo inexistente.');if(String(rec.serviceId)!==String(pay.serviceId))throw new Error('O backup contém pagamento e recibo vinculados a lançamentos diferentes.');if(rec.paymentId!=null&&String(rec.paymentId)!==String(pay.id))throw new Error('O backup contém vínculo contraditório entre pagamento e recibo.')}}for(const rec of receipts){if(rec?.paymentId!=null){let pid=String(rec.paymentId);if(seenPaymentLinks.has(pid))throw new Error('O backup vincula mais de um recibo ao mesmo pagamento.');seenPaymentLinks.add(pid);let pay=paymentById.get(pid);if(!pay)throw new Error('O backup contém recibo apontando para pagamento inexistente.');if(String(pay.serviceId)!==String(rec.serviceId))throw new Error('O backup contém recibo e pagamento vinculados a lançamentos diferentes.');if(pay.receiptId!=null&&String(pay.receiptId)!==String(rec.id))throw new Error('O backup contém vínculo contraditório entre recibo e pagamento.')}}let total="
+          assert s.count(old)==1
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v131-restore-link-validation'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v131-backup-compat-audit.txt
-          git commit -m 'v131: capture backup compatibility audit'
+          git add index.html sw.js
+          git rm .github/workflows/v131-audit-backup-compat.yml v131-backup-compat-audit.txt
+          git commit -m 'v131: validate payment receipt links before restore'
           git push
