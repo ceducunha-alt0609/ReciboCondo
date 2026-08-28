@@ -1,0 +1,37 @@
+name: v131 audit backup compatibility
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v131-audit-backup-compat.yml'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture backup restore compatibility paths
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          terms=['async backup(','async restore(','restoreBackup','paymentsLedgerV1','receiptSeq','safeSeq','bulkPut(','db.settings.put(','db.meta.put(','data.payments','data.receipts','data.services','legacyPending','source:\'service-migration\'']
+          out=[]
+          for term in terms:
+              out.append('\n===== '+term+' =====\n')
+              start=0;n=0
+              while True:
+                  i=s.find(term,start)
+                  if i<0: break
+                  n+=1
+                  out.append(f'#{n} at {i}\n{s[max(0,i-1400):i+3400]}\n')
+                  start=i+len(term)
+              out.append(f'COUNT={n}\n')
+          Path('v131-backup-compat-audit.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v131-backup-compat-audit.txt
+          git commit -m 'v131: capture backup compatibility audit'
+          git push
