@@ -1,0 +1,55 @@
+name: v123 audit duplicate members
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v123-audit-duplicate-members.yml'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture duplicate app members
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, collections
+          s=Path('index.html').read_text(encoding='utf-8')
+          start=s.index('function app(){return{')
+          end=s.find('</script>',start)
+          app=s[start:end]
+          pats=[
+            ('getter',re.compile(r'\bget\s+([A-Za-z_$][\w$]*)\s*\(')),
+            ('async',re.compile(r'\basync\s+([A-Za-z_$][\w$]*)\s*\(')),
+            ('method',re.compile(r'(?<![.$\w])([A-Za-z_$][\w$]*)\s*\([^(){};]*\)\s*\{')),
+          ]
+          hits=collections.defaultdict(list)
+          for kind,pat in pats:
+            for m in pat.finditer(app):
+              name=m.group(1)
+              # Ignore JS control words accidentally matched by generic method regex.
+              if name in {'if','for','while','switch','catch','function'}: continue
+              pos=start+m.start()
+              key=(kind,name)
+              hits[key].append(pos)
+          out=[]
+          # Combine kinds by name too, because async/plain or getter/plain duplicates can still collide.
+          byname=collections.defaultdict(list)
+          for (kind,name),poses in hits.items():
+            for pos in poses: byname[name].append((kind,pos))
+          dups={name:vals for name,vals in byname.items() if len(vals)>1}
+          out.append(f'DUPLICATE_NAMES={len(dups)}\n')
+          for name,vals in sorted(dups.items()):
+            out.append(f'\n===== {name} ({len(vals)}) =====\n')
+            for kind,pos in vals:
+              out.append(f'\n--- {kind} at {pos} ---\n')
+              out.append(s[max(start,pos-700):pos+1800])
+          Path('v123-duplicate-members-audit.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v123-duplicate-members-audit.txt
+          git commit -m 'v123: capture duplicate app member audit'
+          git push
