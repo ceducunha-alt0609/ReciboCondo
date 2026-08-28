@@ -1,4 +1,4 @@
-name: v133 refine provider paid display
+name: v133 inspect provider service card
 on:
   push:
     branches: [ main ]
@@ -11,18 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture exact provider display context
+      - name: Summarize nearby headings and card markup
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           s=Path('index.html').read_text(encoding='utf-8')
           needle='money(s.paidValue || s.amount)'
           assert s.count(needle)==1
           i=s.index(needle)
-          Path('v133-final-structural-audit.txt').write_text(s[max(0,i-4200):i+4200],encoding='utf-8')
+          before=s[max(0,i-7000):i]
+          headings=re.findall(r'<h[34][^>]*>(.*?)</h[34]>',before,re.S)
+          clean=lambda x: re.sub(r'<[^>]+>',' ',x).replace('\n',' ').strip()
+          out=[]
+          out.append('HEADINGS_BEFORE:\n')
+          for h in headings[-8:]: out.append(clean(h)+'\n')
+          start=max(before.rfind('<template',0), before.rfind('<div',0))
+          out.append('\nCARD_CONTEXT:\n'+s[max(0,i-1800):i+1500]+'\n')
+          Path('v133-final-structural-audit.txt').write_text(''.join(out),encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add v133-final-structural-audit.txt
-          git commit -m 'v133: refine provider paid display audit'
+          git commit -m 'v133: inspect provider service card semantics'
           git push
