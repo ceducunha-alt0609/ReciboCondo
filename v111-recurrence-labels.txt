@@ -1,0 +1,121 @@
+
+===== x-model.number="recurrenceForm.paymentDay" =====
+segura</p>
+                <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="tex
+===== x-model.number="recurrenceForm.dueDay" =====
+  <div class="glass rounded-3xl p-4 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[.18em] text-rc-600 dark:text-rc-300 font-black">Automação segura</p>
+                <h3 class="font-black text-lg">Despesas recorrentes</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Cadastre serviços fixos mensais. A recorrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia
+===== recurrenceForm.paymentMethod =====
+rrência gera o lançamento do mês, mas o recibo só é numerado quando você emitir.</p>
+              </div>
+              <div class="flex gap-2">
+                <button @click="generateAllRecurrencesForMonth" class="primary" :disabled="isViewer">Gerar mês atual</button>
+              </div>
+            </div>
+            <form @submit.prevent="saveRecurrence" class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 space-y-3">
+              <div class="grid md:grid-cols-4 gap-3">
+                <label class="md:col-span-1"><span class="text-sm font-bold">Prestador</span><select x-model="recurrenceForm.providerId" required class="input mt-1"><option value="">Selecione</option><template x-for="p in providers"><option :value="p.id" x-text="p.name"></option></template></select></label>
+                <label><span class="text-sm font-bold">Categoria</span><select x-model="recurrenceForm.category" class="input mt-1"><template x-for="c in categories"><option x-text="c"></option></template></select></label>
+                <label><span class="text-sm font-bold">Valor padrão</span><input x-model.number="recurrenceForm.amount" type="number" step="0.01" required class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Dia vencimento</span><input x-model.number="recurrenceForm.dueDay" type="number" min="1" max="31" required class="input mt-1"></label>
+              </div>
+              <div class="grid md:grid-cols-4 gap-3">
+                <label><span class="text-sm font-bold">Dia pagamento previsto</span><input x-model.number="recurrenceForm.paymentDay" type="number" min="1" max="31" class="input mt-1"></label>
+                <label><span class="text-sm font-bold">Forma padrão</span><select x-model="recurrenceForm.paymentMethod" class="input mt-1"><option>PIX</option><option>Dinheiro</option><option>Transferência</option><option>Boleto</option><option>Cheque</option><option>Cartão</option></select></label>
+                <label><span class="text-sm font-bold">Local/Área</span><input x-model="recurrenceForm.location" class="input mt-1" placeholder="Jardim, portão, bloco..."></label>
+                <label class="flex items-end gap-2 pb-3"><input x-model="recurrenceForm.active" type="checkbox" class="w-4 h-4"><span class="text-sm font-bold">Ativa</span></label>
+              </div>
+              <label><span class="text-sm font-bold">Descrição padrão</span><textarea x-model="recurrenceForm.description" required class="input mt-1 min-h-[70px]"></textarea></label>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <button class="primary w-full" :disabled="isViewer" x-text="recurrenceForm.id?'Atualizar recorrência':'Salvar recorrência'"></button>
+                <button type="button" @click="resetRecurrence" class="secondary w-full">Limpar</button>
+              </div>
+            </form>
+            <div class="grid xl:grid-cols-2 gap-3">
+              <template x-for="r in recurrences" :key="r.id">
+                <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/55 dark:bg-slate-950/30 p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <span class="badge" x-text="r.active?'Ativa':'Inativa'"></span>
+                      <h4 class="font-black mt-2" x-text="providerName(r.providerId)"></h4>
+                      <p class="text-xs text-slate-500" x-text="r.category+' • venc. dia '+r.dueDay+' • '+money(r.amount)"></p>
+                    </div>
+                    <div class="text-right text-xs">
+                      <p class="font-black" x-text="recurrenceGenerated(r)?'Gerado neste mês':'Pendente no mês'"></p>
+                      <p class="text-slate-500" x-text="month(today().slice(0,7))"></p>
+                    </div>
+                  </div>
+                  <p class="text-sm mt-3 text-slate-600 dark:text-slate-300" x-text="r.d
