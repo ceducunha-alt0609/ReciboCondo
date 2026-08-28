@@ -1,4 +1,4 @@
-name: v119 audit UTC calendar dates
+name: v119 local calendar defaults
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,38 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture direct UTC calendar date conversions
+      - name: Replace UTC-derived UI calendar defaults
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=["toISOString().slice(0,10)","toISOString().substring(0,10)","new Date().toISOString()","report:{from:","servicePanelMonth:"]
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1300):i+2800])
-                  start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v119-utc-calendar-date-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          marker="function app(){return{"
+          assert s.count(marker)==1
+          helper="function localDateKey(d=new Date()){let y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day}function localMonthKey(d=new Date()){return localDateKey(d).slice(0,7)}"
+          s=s.replace(marker,helper+marker,1)
+          replacements={
+            "reference:new Date().toISOString().slice(0,7),serviceDate:new Date().toISOString().slice(0,10),dueDate:new Date().toISOString().slice(0,10)":"reference:localMonthKey(),serviceDate:localDateKey(),dueDate:localDateKey()",
+            "paymentMonthFilter:new Date().toISOString().slice(0,7)":"paymentMonthFilter:localMonthKey()",
+            "payment:{date:new Date().toISOString().slice(0,10),value:0,method:'PIX'}":"payment:{date:localDateKey(),value:0,method:'PIX'}",
+            "report:{from:new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10),to:new Date().toISOString().slice(0,10),category:'todas',status:'todos'}":"report:{from:localDateKey(new Date(new Date().getFullYear(),new Date().getMonth(),1)),to:localDateKey(),category:'todas',status:'todos'}"
+          }
+          for old,new in replacements.items():
+              assert s.count(old)==1, old
+              s=s.replace(old,new,1)
+          assert "serviceDate:new Date().toISOString().slice(0,10)" not in s
+          assert "payment:{date:new Date().toISOString().slice(0,10)" not in s
+          assert "to:new Date().toISOString().slice(0,10),category:'todas'" not in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v119-local-calendar-defaults'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v119-utc-calendar-date-audit.txt
-          git commit -m 'v119: capture UTC calendar date audit'
+          git add index.html sw.js
+          git rm .github/workflows/v119-audit-utc-calendar-dates.yml v119-utc-calendar-date-audit.txt
+          git commit -m 'v119: use local calendar dates for UI defaults'
           git push
