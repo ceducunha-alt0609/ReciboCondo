@@ -1,0 +1,34 @@
+name: v105 audit report chart
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v105-audit-report-chart.yml'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract report chart context
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          pats=['reportChart','Relatório de pagamentos','reportRows','reportFrom','reportTo','new Chart']
+          out=[]
+          for p in pats:
+              out.append('\n===== '+p+' =====\n')
+              for m in list(re.finditer(re.escape(p),s,re.I))[:20]:
+                  a=max(0,m.start()-1800); b=min(len(s),m.end()+3500)
+                  out.append(s[a:b])
+                  out.append('\n---\n')
+          Path('v105-report-chart-audit.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v105-report-chart-audit.txt
+          git commit -m 'v105: capture report chart audit context'
+          git push
