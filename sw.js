@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v133-provider-service-amount';
+const CACHE_NAME = 'recibocondo-v134-explicit-receipt-call';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',

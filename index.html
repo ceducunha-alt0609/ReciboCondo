@@ -1075,7 +1075,7 @@ padding:2px!important;
                 </select>
               </label>
               <div class="grid sm:grid-cols-2 gap-2 lg:min-w-[360px]">
-                <button @click="issueReceipt" class="primary w-full" :disabled="isViewer">Emitir recibo</button>
+                <button @click="issueReceipt()" class="primary w-full" :disabled="isViewer">Emitir recibo</button>
                 <button @click="printReceipt" class="secondary w-full">Imprimir / Salvar PDF</button>
               </div>
             </div>
