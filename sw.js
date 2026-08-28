@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v104-individual-payment-delete';
+const CACHE_NAME = 'recibocondo-v105-reactive-report-chart';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
