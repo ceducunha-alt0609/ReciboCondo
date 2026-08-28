@@ -1,0 +1,38 @@
+name: v122 audit settings defaults
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v122-audit-settings-defaults.yml'
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture settings default and persistence flow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          terms=["settings:{condoName:","async seed()","saveSettings(","db.settings.put(","this.settings=","condoName","manager:","CNPJ 00.000.000/0001-00"]
+          out=[]
+          for term in terms:
+              out.append('\n===== '+term+' =====\n')
+              start=0;n=0
+              while True:
+                  i=s.find(term,start)
+                  if i<0: break
+                  n+=1
+                  out.append(f'\n--- occurrence {n} at {i} ---\n')
+                  out.append(s[max(0,i-1500):i+3500])
+                  start=i+len(term)
+              out.append(f'\nCOUNT={n}\n')
+          Path('v122-settings-defaults-audit.txt').write_text(''.join(out),encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v122-settings-defaults-audit.txt
+          git commit -m 'v122: capture settings defaults audit'
+          git push
