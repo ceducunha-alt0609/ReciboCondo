@@ -1,4 +1,4 @@
-name: v105 audit report chart
+name: v105 fix report chart
 on:
   push:
     branches: [ main ]
@@ -7,29 +7,42 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract concise chart logic
+      - name: Patch reactive report chart and clean audit tooling
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['repChart','new Chart','Chart(','$watch','view===\'relatorios\'','report.from','report.to']
-          out=[]
-          for term in terms:
-              out.append(f'\n===== {term} =====\n')
-              matches=list(re.finditer(re.escape(term),s))[:30]
-              out.append(f'COUNT={len(matches)}\n')
-              for i,m in enumerate(matches,1):
-                  a=max(0,m.start()-900); b=min(len(s),m.end()+1800)
-                  out.append(f'\n--- MATCH {i} @ {m.start()} ---\n{s[a:b]}\n')
-          Path('v105-report-chart-audit.txt').write_text(''.join(out),encoding='utf-8')
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          replacements={
+            '<input x-model="report.from" type="date"':'<input x-model="report.from" @change="$nextTick(()=>renderCharts())" type="date"',
+            '<input x-model="report.to" type="date"':'<input x-model="report.to" @change="$nextTick(()=>renderCharts())" type="date"',
+            '<select x-model="report.category" class="input mt-1">':'<select x-model="report.category" @change="$nextTick(()=>renderCharts())" class="input mt-1">',
+            '<select x-model="report.status" class="input mt-1">':'<select x-model="report.status" @change="$nextTick(()=>renderCharts())" class="input mt-1">',
+          }
+          for old,new in replacements.items():
+              count=s.count(old)
+              assert count==1, f'anchor count {count}: {old}'
+              s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+
+          sw=Path('sw.js')
+          w=sw.read_text(encoding='utf-8')
+          old="recibocondo-v104-individual-payment-delete"
+          new="recibocondo-v105-reactive-report-chart"
+          assert w.count(old)==1, 'unexpected service-worker cache anchor'
+          sw.write_text(w.replace(old,new,1),encoding='utf-8')
+
+          check=p.read_text(encoding='utf-8')
+          assert check.count('@change="$nextTick(()=>renderCharts())"')>=4
+          assert 'recibocondo-v105-reactive-report-chart' in sw.read_text(encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v105-report-chart-audit.txt
-          git commit -m 'v105: refine report chart audit context'
+          git add index.html sw.js
+          git rm -f v105-report-chart-audit.txt .github/workflows/v105-audit-report-chart.yml
+          git commit -m 'v105: refresh report chart with filters'
           git push
