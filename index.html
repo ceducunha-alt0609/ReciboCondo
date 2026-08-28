@@ -894,13 +894,13 @@ padding:2px!important;
               <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3 xl:col-span-2">
                 <div class="flex items-center justify-between gap-2 mb-2"><h4 class="font-black">Últimos pagamentos do mês</h4><span class="badge" x-text="month(servicePanelMonth)"></span></div>
                 <div class="space-y-2">
-                  <template x-for="s in servicePanelPaidRows.slice(0,5)" :key="s.id">
-                    <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
-                      <div><p class="font-black text-sm" x-text="providerName(s.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(s.paymentDate)+' • '+s.category+' • '+(s.paymentMethod||'forma não informada')"></p></div>
-                      <div class="text-right"><p class="font-black text-emerald-700" x-text="money(s.paidValue||0)"></p><button @click="quickReceipt(s)" class="mini" :disabled="isViewer" x-text="reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'"></button></div>
-                    </div>
-                  </template>
-                  <p x-show="!servicePanelPaidRows.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>
+                  <template x-for="p in servicePanelPaymentEvents.slice(0,5)" :key="'panel-pay-'+p.id">
+          <div class="flex items-center justify-between gap-3 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-700/60 p-2">
+            <div><p class="font-black text-sm" x-text="providerName(p.providerId)"></p><p class="text-xs text-slate-500" x-text="fmt(p.date)+' • '+(p.service?.category||'Sem categoria')+' • '+(p.method||'forma não informada')"></p></div>
+            <div class="text-right"><p class="font-black text-emerald-700" x-text="money(p.amount||0)"></p><button @click="recentPaymentReceipt(p)" class="mini" :disabled="isViewer || !p.service" x-text="p.receipt?'Ver recibo':'Emitir recibo'"></button></div>
+          </div>
+        </template>
+                  <p x-show="!servicePanelPaymentEvents.length" class="text-sm text-slate-500 text-center py-3">Nenhum pagamento registrado neste mês.</p>
                 </div>
               </div>
               <div class="rounded-3xl border border-slate-200/70 dark:border-slate-700/70 bg-white/50 dark:bg-slate-950/30 p-3">
@@ -1719,6 +1719,7 @@ function app(){return{
   get paymentRecent(){return this.payments.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.id||0)-Number(a.id||0)).slice(0,8).map(p=>{let service=this.services.find(s=>Number(s.id)===Number(p.serviceId))||null,receipt=p.receiptId?this.receipts.find(r=>Number(r.id)===Number(p.receiptId))||null:null;return{...p,service,receipt,providerId:p.providerId??service?.providerId,paymentDate:p.date,paymentMethod:p.method,paidValue:Number(p.amount||0)}})},
   get servicePanelRows(){return this.services.filter(s=>s.reference===this.servicePanelMonth).sort((a,b)=>String(b.paymentDate||b.serviceDate).localeCompare(String(a.paymentDate||a.serviceDate)))},
   get servicePanelPaidRows(){return this.servicePanelRows.filter(s=>Number(s.paidValue||0)>0).sort((a,b)=>String(b.paymentDate||b.serviceDate).localeCompare(String(a.paymentDate||a.serviceDate)))},
+  get servicePanelPaymentEvents(){let ref=this.servicePanelMonth;return this.payments.map(p=>{let service=this.services.find(s=>Number(s.id)===Number(p.serviceId))||null,receipt=p.receiptId?this.receipts.find(r=>Number(r.id)===Number(p.receiptId)):null;return{...p,paymentDate:p.date||'',paymentMethod:p.method||'',paidValue:Number(p.amount||0),service,receipt}}).filter(p=>String(p.date||'').slice(0,7)===ref).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.id||0)-Number(a.id||0))},
   get servicePanelOpenRows(){return this.servicePanelRows.filter(s=>this.balance(s)>0).sort((a,b)=>String(a.dueDate||'2999-12-31').localeCompare(String(b.dueDate||'2999-12-31')))},
   get servicePanelTotals(){let expected=this.servicePanelRows.reduce((a,s)=>a+Number(s.amount||0),0),paid=this.servicePanelRows.reduce((a,s)=>a+Number(s.paidValue||0),0);return{expected,paid,open:Math.max(0,expected-paid)}},
   get servicePanelRecurringGenerated(){return this.recurrences.filter(r=>r.active&&this.recurrenceGenerated(r,this.servicePanelMonth))},
