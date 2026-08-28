@@ -1,0 +1,47 @@
+name: v107 report chart bars
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/v107-report-chart-bars.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Change report chart to grouped bars
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="this.charts.rep=new Chart(er,{type:'line',data:{labels:months.map(m=>this.month(m)),datasets:[{label:'Lançado',data:months.map(m=>this.reportRows.filter(s=>String(s.serviceDate||'').slice(0,7)===m).reduce((a,s)=>a+Number(s.amount||0),0)),tension:.35},{label:'Pago',data:months.map(m=>this.reportDetailRows.filter(s=>String(s.paymentDate||'').slice(0,7)===m).reduce((a,s)=>a+Number(s.reportValue||0),0)),tension:.35}]},options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}})"
+          new="this.charts.rep=new Chart(er,{type:'bar',data:{labels:months.map(m=>this.month(m)),datasets:[{label:'Lançado',data:months.map(m=>this.reportRows.filter(s=>String(s.serviceDate||'').slice(0,7)===m).reduce((a,s)=>a+Number(s.amount||0),0))},{label:'Pago',data:months.map(m=>this.reportDetailRows.filter(s=>String(s.paymentDate||'').slice(0,7)===m).reduce((a,s)=>a+Number(s.reportValue||0),0))}]},options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{position:'bottom'}},scales:{x:{stacked:false},y:{beginAtZero:true}}}})"
+          assert s.count(old)==1, f'chart anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+
+          sw=Path('sw.js')
+          w=sw.read_text(encoding='utf-8')
+          old_cache="recibocondo-v106-report-chart-visible"
+          if old_cache not in w:
+              import re
+              m=re.search(r"const CACHE_NAME = '([^']+)'",w)
+              assert m, 'cache name not found'
+              old_cache=m.group(1)
+          new_cache="recibocondo-v107-report-chart-bars"
+          w=w.replace(old_cache,new_cache,1)
+          sw.write_text(w,encoding='utf-8')
+
+          check=p.read_text(encoding='utf-8')
+          assert "this.charts.rep=new Chart(er,{type:'bar'" in check
+          assert "type:'line'" not in check[check.find("let launchMonths"):check.find("let launchMonths")+2500]
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js
+          git rm .github/workflows/v107-report-chart-bars.yml
+          git commit -m 'v107: show report comparison as grouped bars'
+          git push
