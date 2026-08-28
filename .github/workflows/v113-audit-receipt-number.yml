@@ -1,4 +1,4 @@
-name: v113 inspect exact receipt methods
+name: v113 multiple receipt actions
 on:
   push:
     branches: [ main ]
@@ -7,25 +7,34 @@ on:
 permissions:
   contents: write
 jobs:
-  inspect:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print exact receipt method definitions
+      - name: Make receipt labels aware of partial payments
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          for term in ['reportReceiptNumber','quickReceipt','recentPaymentReceipt','issueReceipt']:
-              print('\n===== '+term+' =====')
-              start=0; occ=[]
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  occ.append(i); start=i+len(term)
-              print('COUNT',len(occ),'POSITIONS',occ)
-              for i in occ:
-                  left=max(0,i-220)
-                  right=min(len(s),i+1000)
-                  print('\n---',i,'---\n'+s[left:right])
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old="providerName(id){return (this.providers.find(p=>Number(p.id)===Number(id))||{}).name||'-'},reportReceiptNumber(service){let r=this.receipts.find(x=>Number(x.serviceId)===Number(service.id));return r?.number||'-';},balance(s){"
+          new="providerName(id){return (this.providers.find(p=>Number(p.id)===Number(id))||{}).name||'-'},receiptPending(service){if(!service)return false;let linked=this.receipts.filter(r=>Number(r.serviceId)===Number(service.id)),receiptPaymentIds=new Set(linked.map(r=>Number(r.paymentId)).filter(Boolean)),candidates=this.payments.filter(p=>Number(p.serviceId)===Number(service.id)&&!p.receiptId&&!receiptPaymentIds.has(Number(p.id)));if(candidates.length)return true;let issued=linked.reduce((a,r)=>a+Number(r.total||0),0),servicePayments=this.payments.filter(p=>Number(p.serviceId)===Number(service.id));return !servicePayments.length&&Number(service.paidValue||0)-issued>0.000001},receiptActionLabel(service){if(this.receiptPending(service))return'Emitir recibo';let n=this.receipts.filter(r=>Number(r.serviceId)===Number(service?.id)).length;return n>1?'Ver recibos':n===1?'Ver recibo':'Emitir recibo'},reportReceiptNumber(service){let rs=this.receipts.filter(x=>Number(x.serviceId)===Number(service.id)).sort((a,b)=>Number(a.id||0)-Number(b.id||0));return rs.length?rs.map(r=>r.number).filter(Boolean).join(', '):'-';},balance(s){"
+          assert s.count(old)==1, f'definition anchor count={s.count(old)}'
+          s=s.replace(old,new,1)
+          old1="x-text=\"reportReceiptNumber(s)==='-'?'Emitir recibo':'Ver recibo'\""
+          assert s.count(old1)==2, f'service button count={s.count(old1)}'
+          s=s.replace(old1,'x-text="receiptActionLabel(s)"')
+          old2="x-text=\"reportReceiptNumber(item.data)==='-'?'Emitir recibo':'Ver recibo'\""
+          assert s.count(old2)==1, f'search button count={s.count(old2)}'
+          s=s.replace(old2,'x-text="receiptActionLabel(item.data)"',1)
+          assert s.count('receiptActionLabel(service){')==1
+          assert s.count("reportReceiptNumber(service){let rs=this.receipts.filter") == 1
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v113-multiple-receipt-actions'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js
+          git rm .github/workflows/v113-audit-receipt-number.yml .github/workflows/v113-extract-functions.yml v113-receipt-number-audit.txt
+          git commit -m 'v113: handle multiple receipts per service'
+          git push
