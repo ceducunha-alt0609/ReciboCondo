@@ -1,4 +1,4 @@
-name: v116 audit receipt removal
+name: v116 receipt deletion safety
 on:
   push:
     branches: [ main ]
@@ -7,32 +7,31 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture receipt removal and history behavior
+      - name: Allow exact receipt deletion while preserving payment
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['removeReceiptInternal(','openDeleteReceipt','deleteReceipt','receiptHistory','receiptModal','recentPaymentReceipt(','quickReceipt(','receipts.filter']
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'\n--- occurrence {n} at {i} ---\n')
-                  out.append(s[max(0,i-1800):i+4500])
-                  start=i+len(term)
-              out.append(f'\nCOUNT={n}\n')
-          Path('v116-receipt-removal-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          start=s.find('async removeReceiptInternal(id){'); assert start>=0
+          end=s.find(',async removeRecurrenceInternal',start); assert end>=0
+          old=s[start:end]
+          assert "Só é possível excluir o recibo mais recente" in old, 'expected latest-receipt restriction not found'
+          assert 'db.payments.update(payment.id,{receiptId:null})' in old, 'payment unlink missing in old routine'
+          new="""async removeReceiptInternal(id){let r=this.receipts.find(x=>Number(x.id)===Number(id));if(!r)return;let payment=this.payments.find(p=>Number(p.receiptId)===Number(r.id)||Number(p.id)===Number(r.paymentId));await db.transaction('rw',db.receipts,db.payments,async()=>{await db.receipts.delete(id);if(payment&&Number(payment.receiptId)===Number(r.id))await db.payments.update(payment.id,{receiptId:null})});await this.logAction('delete','Recibo excluído; pagamento preservado','Nº '+r.number+' • '+(r.providerName||this.providerName(r.providerId))+' • '+this.money(r.total||0));await this.load();this.toast('Recibo nº '+r.number+' excluído. O pagamento correspondente foi preservado e pode receber novo recibo.') }"""
+          s=s[:start]+new+s[end:]
+          assert "Só é possível excluir o recibo mais recente" not in s[start:start+2200]
+          assert "Recibo excluído; pagamento preservado" in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v116-exact-receipt-deletion'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v116-receipt-removal-audit.txt
-          git commit -m 'v116: capture receipt removal audit'
+          git add index.html sw.js
+          git rm .github/workflows/v116-audit-receipt-removal.yml v116-receipt-removal-audit.txt
+          git commit -m 'v116: allow exact receipt deletion safely'
           git push
