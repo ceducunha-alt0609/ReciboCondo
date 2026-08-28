@@ -1,4 +1,4 @@
-name: v132 audit unused app members
+name: v132 remove unused app members
 on:
   push:
     branches: [ main ]
@@ -7,67 +7,33 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Find top-level methods and getters with no other references
+      - name: Remove four proven unused members
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
-          s=Path('index.html').read_text(encoding='utf-8')
-          start=s.index('function app(){return{')+len('function app(){return{')
-          i=start; depth_curly=1; depth_par=depth_br=0; quote=None; esc=False; line=False; block=False; seg=start; parts=[]
-          while i<len(s):
-              c=s[i]; n=s[i+1] if i+1<len(s) else ''
-              if line:
-                  if c=='\n': line=False
-                  i+=1; continue
-              if block:
-                  if c=='*' and n=='/': block=False; i+=2; continue
-                  i+=1; continue
-              if quote:
-                  if esc: esc=False
-                  elif c=='\\': esc=True
-                  elif c==quote: quote=None
-                  i+=1; continue
-              if c=='/' and n=='/': line=True; i+=2; continue
-              if c=='/' and n=='*': block=True; i+=2; continue
-              if c in "'\"`": quote=c; i+=1; continue
-              if c=='{': depth_curly+=1
-              elif c=='}':
-                  depth_curly-=1
-                  if depth_curly==0:
-                      parts.append(s[seg:i]); break
-              elif c=='(': depth_par+=1
-              elif c==')': depth_par-=1
-              elif c=='[': depth_br+=1
-              elif c==']': depth_br-=1
-              elif c==',' and depth_curly==1 and depth_par==0 and depth_br==0:
-                  parts.append(s[seg:i]); seg=i+1
-              i+=1
-          methods=[]
-          for p in parts:
-              t=p.strip()
-              m=re.match(r'(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{',t)
-              kind='method'
-              if not m:
-                  m=re.match(r'get\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{',t); kind='getter'
-              if m: methods.append((m.group(1),kind,t[:240]))
-          out=[f'TOP_LEVEL_CALLABLES={len(methods)}\n']
-          candidates=[]
-          for name,kind,head in methods:
-              count=len(re.findall(r'(?<![\w$])'+re.escape(name)+r'(?![\w$])',s))
-              if count<=1:
-                  candidates.append((name,kind,count,head))
-          out.append(f'UNREFERENCED_CANDIDATES={len(candidates)}\n')
-          for name,kind,count,head in candidates:
-              out.append(f'\n{name} | {kind} | occurrences={count}\n{head}\n')
-          Path('v132-unused-members-audit.txt').write_text(''.join(out),encoding='utf-8')
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          olds=[
+            "get topProviders(){return this.annualTopProviders},",
+            "get categorySummary(){return this.annualCategorySummary},",
+            "prepareReceipt(s){this.receiptServiceId=s.id;this.view='recibos';this.after()},",
+            "reportReceiptNumber(service){let rs=this.receipts.filter(x=>Number(x.serviceId)===Number(service.id)).sort((a,b)=>Number(a.id||0)-Number(b.id||0));return rs.length?rs.map(r=>r.number).filter(Boolean).join(', '):'-';},"
+          ]
+          for old in olds:
+              assert s.count(old)==1, old
+              s=s.replace(old,'',1)
+          for name in ['topProviders','categorySummary','prepareReceipt','reportReceiptNumber']:
+              assert not re.search(r'(?<![\w$])'+re.escape(name)+r'(?![\w$])',s), name
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v132-unused-member-cleanup'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v132-unused-members-audit.txt
-          git commit -m 'v132: capture unused app member audit'
+          git add index.html sw.js
+          git rm .github/workflows/v132-audit-unused-members.yml v132-unused-members-audit.txt
+          git commit -m 'v132: remove proven unused app members'
           git push
