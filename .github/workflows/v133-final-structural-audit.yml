@@ -1,4 +1,4 @@
-name: v133 inspect provider service card
+name: v133 provider service amount
 on:
   push:
     branches: [ main ]
@@ -7,31 +7,27 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Summarize nearby headings and card markup
+      - name: Keep provider recent services on launched amount semantics
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
-          s=Path('index.html').read_text(encoding='utf-8')
-          needle='money(s.paidValue || s.amount)'
-          assert s.count(needle)==1
-          i=s.index(needle)
-          before=s[max(0,i-7000):i]
-          headings=re.findall(r'<h[34][^>]*>(.*?)</h[34]>',before,re.S)
-          clean=lambda x: re.sub(r'<[^>]+>',' ',x).replace('\n',' ').strip()
-          out=[]
-          out.append('HEADINGS_BEFORE:\n')
-          for h in headings[-8:]: out.append(clean(h)+'\n')
-          start=max(before.rfind('<template',0), before.rfind('<div',0))
-          out.append('\nCARD_CONTEXT:\n'+s[max(0,i-1800):i+1500]+'\n')
-          Path('v133-final-structural-audit.txt').write_text(''.join(out),encoding='utf-8')
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old='money(s.paidValue || s.amount)'
+          new='money(s.amount)'
+          assert s.count(old)==1
+          s=s.replace(old,new,1)
+          assert old not in s
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v133-provider-service-amount'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v133-final-structural-audit.txt
-          git commit -m 'v133: inspect provider service card semantics'
+          git add index.html sw.js
+          git rm .github/workflows/v133-final-structural-audit.yml v133-final-structural-audit.txt
+          git commit -m 'v133: align provider recent services with launched amount'
           git push
