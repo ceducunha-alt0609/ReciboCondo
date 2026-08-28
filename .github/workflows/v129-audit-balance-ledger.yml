@@ -1,4 +1,4 @@
-name: v129 refine balance helper
+name: v129 local next due date
 on:
   push:
     branches: [ main ]
@@ -7,31 +7,26 @@ on:
 permissions:
   contents: write
 jobs:
-  audit:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Capture exact balance helper and financial getters
+      - name: Keep next-due boundary in local calendar
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          terms=['balance(s){','balance(s) {','get totalPending','get dayOverdue','get dayDueToday','get dayNextDue','get servicePanelOpenRows','get servicePanelTotals','remaining=Math.max']
-          out=[]
-          for term in terms:
-              out.append('\n===== '+term+' =====\n')
-              start=0;n=0
-              while True:
-                  i=s.find(term,start)
-                  if i<0: break
-                  n+=1
-                  out.append(f'#{n} at {i}\n{s[max(0,i-900):i+2200]}\n')
-                  start=i+len(term)
-              out.append(f'COUNT={n}\n')
-          Path('v129-balance-ledger-audit.txt').write_text(''.join(out),encoding='utf-8')
+          import re
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          old="get dayNextDue(){let t=new Date(this.today()+'T00:00:00'),limit=new Date(t);limit.setDate(t.getDate()+7);let a=this.today(),b=limit.toISOString().slice(0,10);return this.services.filter(s=>s.status!=='Pago'&&s.dueDate&&s.dueDate>a&&s.dueDate<=b).sort((x,y)=>String(x.dueDate).localeCompare(String(y.dueDate)))}"
+          new="get dayNextDue(){let t=new Date(this.today()+'T00:00:00'),limit=new Date(t);limit.setDate(t.getDate()+7);let a=this.today(),b=localDateKey(limit);return this.services.filter(s=>s.status!=='Pago'&&s.dueDate&&s.dueDate>a&&s.dueDate<=b).sort((x,y)=>String(x.dueDate).localeCompare(String(y.dueDate)))}"
+          assert s.count(old)==1
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          sw=Path('sw.js'); w=sw.read_text(encoding='utf-8'); w,n=re.subn(r"const CACHE_NAME = '[^']+'","const CACHE_NAME = 'recibocondo-v129-local-next-due'",w,count=1); assert n==1; sw.write_text(w,encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add v129-balance-ledger-audit.txt
-          git commit -m 'v129: refine balance helper audit'
+          git add index.html sw.js
+          git rm .github/workflows/v129-audit-balance-ledger.yml v129-balance-ledger-audit.txt
+          git commit -m 'v129: keep next due dates on local calendar'
           git push
