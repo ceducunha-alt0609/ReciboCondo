@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v161-topbar-sync-fix';
+const CACHE_NAME = 'recibocondo-v162-topbar-sync-icon-only';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
