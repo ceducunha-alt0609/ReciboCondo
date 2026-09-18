@@ -1,8 +1,8 @@
-/* ReciboCondo V159 - sincronização segura entre computadores
+/* ReciboCondo V160 - sincronização segura entre computadores + atalho na topbar
    Carregado pelo Service Worker para evitar substituir o index.html monolítico. */
 (function(){
-  if (window.__rcMultiDesktopSyncV159) return;
-  window.__rcMultiDesktopSyncV159 = true;
+  if (window.__rcMultiDesktopSyncV160) return;
+  window.__rcMultiDesktopSyncV160 = true;
 
   function countSnapshot(s){
     if(!s||typeof s!=='object') return 0;
@@ -20,6 +20,7 @@
 
   window.app = function(){
     const state = originalApp.apply(this, arguments);
+    window.__rcAppState = state;
 
     state.desktopBootstrapFromCloud = async function(){
       if(this.appPlatform==='Mobile'||!this.firebaseUid||!window.rcFirebaseSync?.configured) return;
@@ -114,6 +115,73 @@
     return state;
   };
 
+  function installTopbarSync(){
+    if(document.getElementById('rcTopbarSyncBtn')) return;
+    const actionRow=document.querySelector('.app-topbar .flex.justify-end.items-center.gap-2');
+    if(!actionRow) return;
+
+    const style=document.createElement('style');
+    style.id='rc-topbar-sync-style-v160';
+    style.textContent=`
+      #rcTopbarSyncBtn{height:3rem;min-width:7.4rem;padding:0 .9rem;border-radius:1rem;border:1px solid rgba(47,107,79,.28);background:rgba(255,255,255,.52);color:#183445;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-size:.76rem;font-weight:900;line-height:1;transition:.18s ease}
+      #rcTopbarSyncBtn:hover{background:#fff;box-shadow:0 8px 20px rgba(15,42,58,.10);transform:translateY(-1px)}
+      #rcTopbarSyncBtn:disabled{cursor:wait;opacity:.72;transform:none}
+      #rcTopbarSyncBtn .rc-tb-sync-dot{width:.48rem;height:.48rem;border-radius:999px;background:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.12)}
+      #rcTopbarSyncBtn.is-ready .rc-tb-sync-dot{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+      #rcTopbarSyncBtn.is-error .rc-tb-sync-dot{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+      #rcTopbarSyncBtn.is-syncing .rc-tb-sync-dot{background:#d97706;box-shadow:0 0 0 3px rgba(217,119,6,.12)}
+      #rcTopbarSyncBtn .rc-tb-spin{animation:rcTbSyncSpin .8s linear infinite}
+      @keyframes rcTbSyncSpin{to{transform:rotate(360deg)}}
+      html.dark #rcTopbarSyncBtn{background:#22364a;border-color:#3b5168;color:#eef2f7}
+      html.dark #rcTopbarSyncBtn:hover{background:#2a4056}
+      @media(max-width:1023px){#rcTopbarSyncBtn{display:none!important}}
+    `;
+    document.head.appendChild(style);
+
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.id='rcTopbarSyncBtn';
+    btn.innerHTML='<i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="rc-tb-sync-label">Sincronizar</span><span class="rc-tb-sync-dot" aria-hidden="true"></span>';
+    actionRow.insertBefore(btn,actionRow.firstChild);
+
+    const paint=()=>{
+      const s=window.__rcAppState;
+      if(!s) return;
+      const state=s.syncState||'pending';
+      btn.classList.toggle('is-ready',state==='ready');
+      btn.classList.toggle('is-error',state==='error');
+      btn.classList.toggle('is-syncing',state==='syncing');
+      btn.disabled=state==='syncing';
+      const label=btn.querySelector('.rc-tb-sync-label');
+      const icon=btn.querySelector('svg')||btn.querySelector('i');
+      if(label) label.textContent=state==='syncing'?'Sincronizando':'Sincronizar';
+      if(icon) icon.classList.toggle('rc-tb-spin',state==='syncing');
+      btn.title=s.firebaseUser
+        ? (state==='syncing'?'Sincronizando…':'Sincronizar este computador')
+        : 'Conectar Google para sincronizar';
+    };
+
+    btn.addEventListener('click',async()=>{
+      const s=window.__rcAppState;
+      if(!s) return;
+      if(!s.firebaseUser){
+        if(typeof s.go==='function') s.go('config'); else s.view='config';
+        s.configModal='sync';
+        if(typeof s.after==='function') s.after();
+        return;
+      }
+      if(typeof s.desktopSyncNow==='function'){
+        paint();
+        await s.desktopSyncNow.call(s);
+        paint();
+      }
+    });
+
+    window.addEventListener('rc-firebase-auth',()=>setTimeout(paint,0));
+    setInterval(paint,900);
+    setTimeout(()=>{ if(window.lucide) lucide.createIcons(); paint(); },50);
+  }
+
   window.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.config-sync-modal p,.config-sync-modal b,.config-sync-modal span').forEach(el=>{
       if(el.textContent.trim()==='PC como origem dos dados e mobile somente para consulta.') el.textContent='Computadores sincronizados pelo Firebase; mobile permanece somente consulta.';
@@ -121,5 +189,6 @@
     });
     const syncBtn=[...document.querySelectorAll('.config-sync-actions button')].find(b=>b.textContent.includes('Sincronizar agora'));
     if(syncBtn) syncBtn.innerHTML='<i data-lucide="refresh-cw"></i> Sincronizar este computador';
+    installTopbarSync();
   },{once:true});
 })();
