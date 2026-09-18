@@ -11,7 +11,8 @@ const APP_SHELL = [
   './assets/icons/icon-512.png',
   './assets/icons/icon-maskable-192.png',
   './assets/icons/icon-maskable-512.png',
-  './multidesktop-sync.js'
+  './multidesktop-sync.js',
+  './splash-harmony.js'
 ];
 
 async function injectSyncPatch(response) {
@@ -19,9 +20,13 @@ async function injectSyncPatch(response) {
   const type = response.headers.get('content-type') || '';
   if (!type.includes('text/html')) return response;
   const text = await response.text();
-  const injected = text.includes('multidesktop-sync.js')
-    ? text
-    : text.replace('</body>', '<script src="./multidesktop-sync.js"></script>\n</body>');
+  let injected = text;
+  if (!injected.includes('multidesktop-sync.js')) {
+    injected = injected.replace('</body>', '<script src="./multidesktop-sync.js"></script>\n</body>');
+  }
+  if (!injected.includes('splash-harmony.js')) {
+    injected = injected.replace('</body>', '<script src="./splash-harmony.js"></script>\n</body>');
+  }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
   return new Response(injected, { status: response.status, statusText: response.statusText, headers });
