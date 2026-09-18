@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v163-refresh-session';
+const CACHE_NAME = 'recibocondo-v164-splash-prepaint';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
@@ -25,7 +25,7 @@ async function injectSyncPatch(response) {
     injected = injected.replace('</body>', '<script src="./multidesktop-sync.js"></script>\n</body>');
   }
   if (!injected.includes('splash-harmony.js')) {
-    injected = injected.replace('</body>', '<script src="./splash-harmony.js"></script>\n</body>');
+    injected = injected.replace('</head>', '<script src="./splash-harmony.js"></script>\n</head>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
