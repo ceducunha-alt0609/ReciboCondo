@@ -182,13 +182,38 @@
     setTimeout(()=>{ if(window.lucide) lucide.createIcons(); paint(); },50);
   }
 
-  window.addEventListener('DOMContentLoaded',()=>{
-    document.querySelectorAll('.config-sync-modal p,.config-sync-modal b,.config-sync-modal span').forEach(el=>{
-      if(el.textContent.trim()==='PC como origem dos dados e mobile somente para consulta.') el.textContent='Computadores sincronizados pelo Firebase; mobile permanece somente consulta.';
-      if(el.textContent.trim()==='PC · leitura e escrita') el.textContent='Computadores · leitura e escrita';
+  function bootTopbarSyncPatch(){
+    const refreshCopy=()=>{
+      document.querySelectorAll('.config-sync-modal p,.config-sync-modal b,.config-sync-modal span').forEach(el=>{
+        if(el.textContent.trim()==='PC como origem dos dados e mobile somente para consulta.') el.textContent='Computadores sincronizados pelo Firebase; mobile permanece somente consulta.';
+        if(el.textContent.trim()==='PC · leitura e escrita') el.textContent='Computadores · leitura e escrita';
+      });
+      const syncBtn=[...document.querySelectorAll('.config-sync-actions button')].find(b=>b.textContent.includes('Sincronizar agora'));
+      if(syncBtn) syncBtn.innerHTML='<i data-lucide="refresh-cw"></i> Sincronizar este computador';
+    };
+
+    const tryInstall=()=>{
+      refreshCopy();
+      installTopbarSync();
+    };
+
+    tryInstall();
+    const timer=setInterval(()=>{
+      tryInstall();
+      if(document.getElementById('rcTopbarSyncBtn')) clearInterval(timer);
+    },500);
+    setTimeout(()=>clearInterval(timer),30000);
+
+    const observer=new MutationObserver(()=>{
+      if(!document.getElementById('rcTopbarSyncBtn')) tryInstall();
     });
-    const syncBtn=[...document.querySelectorAll('.config-sync-actions button')].find(b=>b.textContent.includes('Sincronizar agora'));
-    if(syncBtn) syncBtn.innerHTML='<i data-lucide="refresh-cw"></i> Sincronizar este computador';
-    installTopbarSync();
-  },{once:true});
+    observer.observe(document.body,{childList:true,subtree:true});
+    setTimeout(()=>observer.disconnect(),60000);
+  }
+
+  if(document.readyState==='loading'){
+    window.addEventListener('DOMContentLoaded',bootTopbarSyncPatch,{once:true});
+  }else{
+    bootTopbarSyncPatch();
+  }
 })();
