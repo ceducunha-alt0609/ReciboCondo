@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v164-splash-prepaint';
+const CACHE_NAME = 'recibocondo-v165-splash-native-css';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
@@ -11,8 +11,7 @@ const APP_SHELL = [
   './assets/icons/icon-512.png',
   './assets/icons/icon-maskable-192.png',
   './assets/icons/icon-maskable-512.png',
-  './multidesktop-sync.js',
-  './splash-harmony.js'
+  './multidesktop-sync.js'
 ];
 
 async function injectSyncPatch(response) {
@@ -24,8 +23,18 @@ async function injectSyncPatch(response) {
   if (!injected.includes('multidesktop-sync.js')) {
     injected = injected.replace('</body>', '<script src="./multidesktop-sync.js"></script>\n</body>');
   }
-  if (!injected.includes('splash-harmony.js')) {
-    injected = injected.replace('</head>', '<script src="./splash-harmony.js"></script>\n</head>');
+  if (!injected.includes('rc-splash-native-v165')) {
+    const splashCss = '<style id="rc-splash-native-v165">' +
+      '#rcDynamicSplash .rc-card{width:min(84vw,390px)!important;padding:18px!important;transform:none!important;margin:auto!important;text-align:center!important}' +
+      '#rcDynamicSplash .rc-icon-wrap{width:clamp(82px,8vw,108px)!important;height:clamp(82px,8vw,108px)!important;margin:0 auto 15px!important;filter:drop-shadow(0 16px 30px rgba(0,0,0,.38))!important}' +
+      '#rcDynamicSplash h1{font-size:clamp(30px,3.2vw,42px)!important;line-height:1.02!important;letter-spacing:-.045em!important;margin:0!important}' +
+      '#rcDynamicSplash .rc-line{width:min(54vw,280px)!important;margin:13px auto 11px!important}' +
+      '#rcDynamicSplash .rc-sub{font-size:clamp(9px,1vw,11px)!important;letter-spacing:.19em!important;line-height:1.5!important}' +
+      '#rcDynamicSplash .rc-load-label{margin-top:24px!important;font-size:13px!important}' +
+      '#rcDynamicSplash .rc-progress{width:min(54vw,280px)!important;height:6px!important;margin:11px auto 7px!important}' +
+      '@media(max-width:640px){#rcDynamicSplash .rc-card{width:min(88vw,320px)!important;padding:12px 12px 16px!important;transform:none!important}#rcDynamicSplash .rc-icon-wrap{width:76px!important;height:76px!important;margin-bottom:12px!important}#rcDynamicSplash h1{font-size:30px!important;line-height:1.02!important}}' +
+      '</style>';
+    injected = injected.replace('</head>', splashCss + '\n</head>');
   }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
