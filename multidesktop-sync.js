@@ -1,4 +1,4 @@
-/* ReciboCondo V160 - sincronização segura entre computadores + atalho na topbar
+/* ReciboCondo V163 - sync seguro + topbar + sessão preservada no refresh
    Carregado pelo Service Worker para evitar substituir o index.html monolítico. */
 (function(){
   if (window.__rcMultiDesktopSyncV160) return;
@@ -21,6 +21,64 @@
   window.app = function(){
     const state = originalApp.apply(this, arguments);
     window.__rcAppState = state;
+
+    // V163 — preserva sessão e tela durante recargas/atualizações da mesma janela.
+    // sessionStorage mantém o comportamento seguro: fechar a janela/PWA encerra a sessão.
+    const RC_SESSION_KEY='rc_runtime_session_v1';
+    const RC_VIEW_KEY='rc_runtime_view_v1';
+    const validViews=new Set(['dashboard','prestadores','servicos','pagamentos','recibos','relatorios','busca','config']);
+    const readRuntimeSession=()=>{
+      try{
+        const raw=sessionStorage.getItem(RC_SESSION_KEY);
+        const saved=raw?JSON.parse(raw):null;
+        if(saved && saved.logged===true && (saved.role==='admin'||saved.role==='viewer')){
+          state.auth={logged:true,role:saved.role};
+          const v=sessionStorage.getItem(RC_VIEW_KEY);
+          if(validViews.has(v)) state.view=v;
+        }
+      }catch(_){}
+    };
+    const saveRuntimeSession=()=>{
+      try{
+        if(state.auth?.logged){
+          sessionStorage.setItem(RC_SESSION_KEY,JSON.stringify({logged:true,role:state.auth.role||'viewer'}));
+          if(validViews.has(state.view)) sessionStorage.setItem(RC_VIEW_KEY,state.view);
+        }
+      }catch(_){}
+    };
+    const clearRuntimeSession=()=>{
+      try{
+        sessionStorage.removeItem(RC_SESSION_KEY);
+        sessionStorage.removeItem(RC_VIEW_KEY);
+      }catch(_){}
+    };
+
+    readRuntimeSession();
+
+    const baseDoLogin=state.doLogin;
+    if(typeof baseDoLogin==='function'){
+      state.doLogin=function(){
+        const result=baseDoLogin.apply(this,arguments);
+        if(this.auth?.logged) saveRuntimeSession();
+        return result;
+      };
+    }
+
+    const baseLogout=state.logout;
+    if(typeof baseLogout==='function'){
+      state.logout=function(){
+        clearRuntimeSession();
+        return baseLogout.apply(this,arguments);
+      };
+    }
+
+    const baseAfter=state.after;
+    if(typeof baseAfter==='function'){
+      state.after=function(){
+        if(this.auth?.logged) saveRuntimeSession();
+        return baseAfter.apply(this,arguments);
+      };
+    }
 
     state.desktopBootstrapFromCloud = async function(){
       if(this.appPlatform==='Mobile'||!this.firebaseUid||!window.rcFirebaseSync?.configured) return;
