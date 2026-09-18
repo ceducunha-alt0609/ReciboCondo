@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v134-explicit-receipt-call';
+const CACHE_NAME = 'recibocondo-v159-multidesktop-sync';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
@@ -10,13 +10,31 @@ const APP_SHELL = [
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
   './assets/icons/icon-maskable-192.png',
-  './assets/icons/icon-maskable-512.png'
+  './assets/icons/icon-maskable-512.png',
+  './multidesktop-sync.js'
 ];
+
+async function injectSyncPatch(response) {
+  if (!response || !response.ok) return response;
+  const type = response.headers.get('content-type') || '';
+  if (!type.includes('text/html')) return response;
+  const text = await response.text();
+  const injected = text.includes('multidesktop-sync.js')
+    ? text
+    : text.replace('</body>', '<script src="./multidesktop-sync.js"></script>\n</body>');
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  return new Response(injected, { status: response.status, statusText: response.statusText, headers });
+}
 
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL).catch(() => Promise.resolve()))
+    caches.open(CACHE_NAME).then(async cache => {
+      await cache.addAll(APP_SHELL).catch(() => Promise.resolve());
+      const index = await cache.match('./index.html');
+      if (index) await cache.put('./index.html', await injectSyncPatch(index));
+    })
   );
 });
 
@@ -40,10 +58,11 @@ self.addEventListener('fetch', event => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).then(response => {
-        const copy = response.clone();
+      fetch(request).then(async response => {
+        const patched = await injectSyncPatch(response);
+        const copy = patched.clone();
         caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
-        return response;
+        return patched;
       }).catch(() => caches.match('./index.html'))
     );
     return;
