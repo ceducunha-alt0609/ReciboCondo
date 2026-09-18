@@ -123,10 +123,10 @@
     const style=document.createElement('style');
     style.id='rc-topbar-sync-style-v160';
     style.textContent=`
-      #rcTopbarSyncBtn{height:3rem;min-width:7.4rem;padding:0 .9rem;border-radius:1rem;border:1px solid rgba(47,107,79,.28);background:rgba(255,255,255,.52);color:#183445;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font-size:.76rem;font-weight:900;line-height:1;transition:.18s ease}
+      #rcTopbarSyncBtn{height:3rem;width:3rem;min-width:3rem;padding:0;border-radius:1rem;border:1px solid rgba(47,107,79,.28);background:rgba(255,255,255,.52);color:#183445;position:relative;display:inline-flex;align-items:center;justify-content:center;gap:0;font-size:.76rem;font-weight:900;line-height:1;transition:.18s ease}
       #rcTopbarSyncBtn:hover{background:#fff;box-shadow:0 8px 20px rgba(15,42,58,.10);transform:translateY(-1px)}
       #rcTopbarSyncBtn:disabled{cursor:wait;opacity:.72;transform:none}
-      #rcTopbarSyncBtn .rc-tb-sync-dot{width:.48rem;height:.48rem;border-radius:999px;background:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.12)}
+      #rcTopbarSyncBtn .rc-tb-sync-dot{position:absolute;right:.45rem;bottom:.42rem;width:.42rem;height:.42rem;border-radius:999px;background:#94a3b8;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
       #rcTopbarSyncBtn.is-ready .rc-tb-sync-dot{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12)}
       #rcTopbarSyncBtn.is-error .rc-tb-sync-dot{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
       #rcTopbarSyncBtn.is-syncing .rc-tb-sync-dot{background:#d97706;box-shadow:0 0 0 3px rgba(217,119,6,.12)}
@@ -141,7 +141,7 @@
     const btn=document.createElement('button');
     btn.type='button';
     btn.id='rcTopbarSyncBtn';
-    btn.innerHTML='<i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="rc-tb-sync-label">Sincronizar</span><span class="rc-tb-sync-dot" aria-hidden="true"></span>';
+    btn.innerHTML='<i data-lucide="refresh-cw" class="w-4 h-4"></i><span class="rc-tb-sync-dot" aria-hidden="true"></span>';
     actionRow.insertBefore(btn,actionRow.firstChild);
 
     const paint=()=>{
@@ -152,9 +152,7 @@
       btn.classList.toggle('is-error',state==='error');
       btn.classList.toggle('is-syncing',state==='syncing');
       btn.disabled=state==='syncing';
-      const label=btn.querySelector('.rc-tb-sync-label');
       const icon=btn.querySelector('svg')||btn.querySelector('i');
-      if(label) label.textContent=state==='syncing'?'Sincronizando':'Sincronizar';
       if(icon) icon.classList.toggle('rc-tb-spin',state==='syncing');
       btn.title=s.firebaseUser
         ? (state==='syncing'?'Sincronizando…':'Sincronizar este computador')
