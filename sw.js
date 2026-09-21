@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v165-splash-native-css';
+const CACHE_NAME = 'recibocondo-v166-receipt-print-call';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
