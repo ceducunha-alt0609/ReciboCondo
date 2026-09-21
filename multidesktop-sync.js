@@ -22,6 +22,18 @@
     const state = originalApp.apply(this, arguments);
     window.__rcAppState = state;
 
+    // V167 — a fila operacional deve mostrar TODO lançamento em aberto,
+    // independentemente do mês usado pelos indicadores da Central de Pagamentos.
+    Object.defineProperty(state,'paymentQueueRows',{
+      configurable:true,
+      enumerable:true,
+      get(){
+        return (this.services||[])
+          .filter(s=>typeof this.balance==='function' ? this.balance(s)>0.009 : Math.max(0,Number(s.amount||0)-Number(s.paidValue||0))>0.009)
+          .sort((a,b)=>String(a.dueDate||a.serviceDate||'2999-12-31').localeCompare(String(b.dueDate||b.serviceDate||'2999-12-31')));
+      }
+    });
+
     // V163 — preserva sessão e tela durante recargas/atualizações da mesma janela.
     // sessionStorage mantém o comportamento seguro: fechar a janela/PWA encerra a sessão.
     const RC_SESSION_KEY='rc_runtime_session_v1';
@@ -172,6 +184,31 @@
 
     return state;
   };
+
+  function patchPaymentQueueBindings(){
+    try{
+      const section=[...document.querySelectorAll('section')].find(s=>{
+        const show=s.getAttribute('x-show')||'';
+        return show.includes("view==='pagamentos'") && s.querySelector('.payment-queue-grid');
+      });
+      if(!section) return;
+
+      const queueCard=[...section.querySelectorAll('.payments-action-card')].find(b=>b.textContent.includes('Fila de pagamentos'));
+      const count=queueCard?.querySelector('[x-text="paymentPanelOpenRows.length"]');
+      if(count) count.setAttribute('x-text','paymentQueueRows.length');
+
+      const tpl=section.querySelector('.payment-queue-grid template[x-for*="paymentPanelOpenRows"]');
+      if(tpl) tpl.setAttribute('x-for','s in paymentQueueRows');
+
+      const empty=section.querySelector('.payment-queue-grid [x-show="!paymentPanelOpenRows.length"]');
+      if(empty) empty.setAttribute('x-show','!paymentQueueRows.length');
+    }catch(e){
+      console.warn('[ReciboCondo] Não foi possível ajustar a fila global de pagamentos.',e);
+    }
+  }
+
+  // Executa ainda durante o parse, antes do Alpine inicializar os bindings.
+  patchPaymentQueueBindings();
 
   function installTopbarSync(){
     if(document.getElementById('rcTopbarSyncBtn')) return;
