@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v170-pwa-icon-refresh';
+const CACHE_NAME = 'recibocondo-v171-current-brand-icon';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
@@ -11,6 +11,8 @@ const APP_SHELL = [
   './assets/icons/icon-512.png',
   './assets/icons/icon-maskable-192.png',
   './assets/icons/icon-maskable-512.png',
+  './assets/icons/recibocondo-current.svg',
+  './assets/icons/recibocondo-current-maskable.svg',
   './multidesktop-sync.js'
 ];
 
