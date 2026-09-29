@@ -1,4 +1,4 @@
-name: Build ReciboCondo current PWA icon
+name: Build ReciboCondo PNG PWA icons
 
 on:
   push:
@@ -9,58 +9,92 @@ permissions:
   contents: write
 
 jobs:
-  build-icon:
+  build-icons:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Create current-brand SVG icons and update manifest
+      - name: Install Pillow
+        run: python -m pip install pillow
+      - name: Generate PNG icons and update manifest
         run: |
-          mkdir -p assets/icons
-          cat > assets/icons/recibocondo-current.svg <<'SVG'
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-            <rect width="512" height="512" rx="104" fill="#eef7f1"/>
-            <g fill="none" stroke="#059669" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M154 430V110c0-14 11-25 25-25h154c14 0 25 11 25 25v320"/>
-              <path d="M154 240h-48c-14 0-25 11-25 25v165"/>
-              <path d="M358 190h48c14 0 25 11 25 25v215"/>
-              <path d="M220 150h72"/>
-              <path d="M220 215h72"/>
-              <path d="M220 280h72"/>
-              <path d="M220 345h72"/>
-              <path d="M55 430h402"/>
-            </g>
-          </svg>
-          SVG
-          cp assets/icons/recibocondo-current.svg assets/icons/recibocondo-current-maskable.svg
           python - <<'PY'
-          import json
+          from PIL import Image, ImageDraw
           from pathlib import Path
+          import json, re
+
+          out = Path("assets/icons")
+          out.mkdir(parents=True, exist_ok=True)
+
+          def make_icon(size, path, maskable=False):
+              bg = (238,247,241,255)
+              green = (5,150,105,255)
+              im = Image.new("RGBA",(size,size),bg)
+              d = ImageDraw.Draw(im)
+
+              # proportions based on the app's current Lucide building-2 identity
+              pad = int(size*0.15 if not maskable else size*0.19)
+              sw = max(4, int(size*0.055))
+              left = int(size*0.30)
+              right = int(size*0.70)
+              top = int(size*0.17)
+              bottom = int(size*0.82)
+
+              # main building
+              d.rounded_rectangle([left,top,right,bottom], radius=max(6,int(size*.03)),
+                                  outline=green, width=sw)
+
+              # side wings
+              d.line([(left,int(size*.47)),(int(size*.16),int(size*.47)),(int(size*.16),bottom)],
+                     fill=green,width=sw,joint="curve")
+              d.line([(right,int(size*.37)),(int(size*.84),int(size*.37)),(int(size*.84),bottom)],
+                     fill=green,width=sw,joint="curve")
+
+              # floors
+              for y in [0.30,0.43,0.56,0.69]:
+                  yy=int(size*y)
+                  d.line([(int(size*.43),yy),(int(size*.57),yy)],fill=green,width=sw)
+
+              # ground
+              d.line([(pad,bottom),(size-pad,bottom)],fill=green,width=sw)
+
+              im.save(path,"PNG")
+
+          make_icon(192,out/"recibocondo-pwa-192-v172.png",False)
+          make_icon(512,out/"recibocondo-pwa-512-v172.png",False)
+          make_icon(192,out/"recibocondo-maskable-192-v172.png",True)
+          make_icon(512,out/"recibocondo-maskable-512-v172.png",True)
+
           p=Path("manifest.json")
-          d=json.loads(p.read_text(encoding="utf-8"))
-          d["icons"]=[
-            {"src":"assets/icons/recibocondo-current.svg?v=171","sizes":"any","type":"image/svg+xml","purpose":"any"},
-            {"src":"assets/icons/recibocondo-current-maskable.svg?v=171","sizes":"any","type":"image/svg+xml","purpose":"maskable"}
+          data=json.loads(p.read_text(encoding="utf-8"))
+          data["icons"]=[
+            {"src":"assets/icons/recibocondo-pwa-192-v172.png","sizes":"192x192","type":"image/png","purpose":"any"},
+            {"src":"assets/icons/recibocondo-pwa-512-v172.png","sizes":"512x512","type":"image/png","purpose":"any"},
+            {"src":"assets/icons/recibocondo-maskable-192-v172.png","sizes":"192x192","type":"image/png","purpose":"maskable"},
+            {"src":"assets/icons/recibocondo-maskable-512-v172.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
           ]
-          p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+
+          sw=Path("sw.js")
+          s=sw.read_text(encoding="utf-8")
+          s=re.sub(r"const CACHE_NAME = 'recibocondo-[^']+';","const CACHE_NAME = 'recibocondo-v172-png-pwa-icons';",s,1)
+          for icon in [
+            "./assets/icons/recibocondo-pwa-192-v172.png",
+            "./assets/icons/recibocondo-pwa-512-v172.png",
+            "./assets/icons/recibocondo-maskable-192-v172.png",
+            "./assets/icons/recibocondo-maskable-512-v172.png"
+          ]:
+              if icon not in s:
+                  s=s.replace("  './multidesktop-sync.js'","  '"+icon+"',\n  './multidesktop-sync.js'")
+          sw.write_text(s,encoding="utf-8")
           PY
-          python - <<'PY'
-          from pathlib import Path
-          p=Path("sw.js")
-          s=p.read_text(encoding="utf-8")
-          import re
-          s=re.sub(r"const CACHE_NAME = 'recibocondo-[^']+';","const CACHE_NAME = 'recibocondo-v171-current-brand-icon';",s,1)
-          if "'./assets/icons/recibocondo-current.svg'" not in s:
-              s=s.replace("  './assets/icons/icon-maskable-512.png',","  './assets/icons/icon-maskable-512.png',\n  './assets/icons/recibocondo-current.svg',\n  './assets/icons/recibocondo-current-maskable.svg',")
-          p.write_text(s,encoding="utf-8")
-          PY
-      - name: Commit icon refresh
+      - name: Commit PNG PWA icons
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/icons/recibocondo-current.svg assets/icons/recibocondo-current-maskable.svg manifest.json sw.js
+          git add manifest.json sw.js assets/icons/recibocondo-*-v172.png
           if git diff --cached --quiet; then
             echo "Nothing to commit."
             exit 0
           fi
-          git commit -m "fix: use current ReciboCondo brand icon for PWA"
+          git commit -m "fix: use PNG icons for Edge PWA installation"
           git push
