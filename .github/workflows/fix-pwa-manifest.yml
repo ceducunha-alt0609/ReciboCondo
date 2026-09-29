@@ -1,4 +1,4 @@
-name: Inspect published ReciboCondo PWA files
+name: Normalize ReciboCondo PWA identity
 
 on:
   push:
@@ -6,22 +6,97 @@ on:
       - '.github/workflows/fix-pwa-manifest.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  normalize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect published PWA resources
+      - name: Normalize HTML head and PWA identity
         run: |
-          set -x
-          curl -sS -D - -o /tmp/manifest https://ceducunha-alt0609.github.io/ReciboCondo/manifest.json | sed -n '1,30p'
-          echo "----- MANIFEST BODY -----"
-          cat /tmp/manifest
-          echo "----- ICON 192 HEADERS -----"
-          curl -sS -I https://ceducunha-alt0609.github.io/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png
-          echo "----- ICON 512 HEADERS -----"
-          curl -sS -I https://ceducunha-alt0609.github.io/ReciboCondo/assets/icons/recibocondo-pwa-512-v172.png
-          echo "----- INDEX FIRST 120 BYTES -----"
-          curl -sS https://ceducunha-alt0609.github.io/ReciboCondo/ | head -c 120 | xxd
+          python - <<'PY'
+          from pathlib import Path
+          import re, json
+
+          p=Path("index.html")
+          s=p.read_text(encoding="utf-8")
+          fence=chr(96)*3
+
+          stripped=s.lstrip("\ufeff \t\r\n")
+          if stripped.startswith(fence):
+              pos=s.find(fence)
+              end=pos+3
+              while end < len(s) and s[end] in "\r\n":
+                  end += 1
+              s=s[:pos]+s[end:]
+
+          tail=s.rstrip()
+          if tail.endswith(fence):
+              last=tail.rfind(fence)
+              s=tail[:last].rstrip()+"\n"
+
+          s=re.sub(
+              r'<link\s+rel=["\']manifest["\'][^>]*>',
+              '<link rel="manifest" href="/ReciboCondo/manifest.json?v=173" />',
+              s,
+              count=1,
+              flags=re.I
+          )
+
+          s=re.sub(r'\s*<link\s+rel=["\']icon["\']\s+href=["\']favicon\.ico["\']\s*/?>','',s,flags=re.I)
+          s=re.sub(r'\s*<link\s+rel=["\']icon["\'][^>]*icon-32\.png[^>]*>','',s,flags=re.I)
+          s=re.sub(r'\s*<link\s+rel=["\']icon["\'][^>]*icon-192\.png[^>]*>','',s,flags=re.I)
+          s=re.sub(r'\s*<link\s+rel=["\']apple-touch-icon["\'][^>]*>','',s,flags=re.I)
+
+          marker='<link rel="manifest" href="/ReciboCondo/manifest.json?v=173" />'
+          icons='''\n  <link rel="icon" type="image/png" sizes="192x192" href="/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png?v=173" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/ReciboCondo/assets/icons/recibocondo-pwa-512-v172.png?v=173" />
+  <link rel="apple-touch-icon" href="/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png?v=173" />'''
+          if marker in s:
+              s=s.replace(marker,marker+icons,1)
+
+          p.write_text(s,encoding="utf-8")
+
+          mp=Path("manifest.json")
+          d=json.loads(mp.read_text(encoding="utf-8"))
+          d["id"]="/ReciboCondo/"
+          d["start_url"]="/ReciboCondo/"
+          d["scope"]="/ReciboCondo/"
+          d["icons"]=[
+            {"src":"/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png?v=173","sizes":"192x192","type":"image/png","purpose":"any"},
+            {"src":"/ReciboCondo/assets/icons/recibocondo-pwa-512-v172.png?v=173","sizes":"512x512","type":"image/png","purpose":"any"},
+            {"src":"/ReciboCondo/assets/icons/recibocondo-maskable-192-v172.png?v=173","sizes":"192x192","type":"image/png","purpose":"maskable"},
+            {"src":"/ReciboCondo/assets/icons/recibocondo-maskable-512-v172.png?v=173","sizes":"512x512","type":"image/png","purpose":"maskable"}
+          ]
+          mp.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+
+          sw=Path("sw.js")
+          ss=sw.read_text(encoding="utf-8")
+          ss=re.sub(r"const CACHE_NAME = 'recibocondo-[^']+';","const CACHE_NAME = 'recibocondo-v173-normalized-pwa-identity';",ss,1)
+          sw.write_text(ss,encoding="utf-8")
+          PY
+
+      - name: Verify normalized document
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path("index.html").read_text(encoding="utf-8")
+          print(repr(s[:80]))
+          assert s.lstrip().lower().startswith("<!doctype html>")
+          assert '/ReciboCondo/manifest.json?v=173' in s
+          assert 'recibocondo-pwa-192-v172.png?v=173' in s
+          print("PWA identity normalized.")
+          PY
+
+      - name: Commit normalization
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html manifest.json sw.js
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+            exit 0
+          fi
+          git commit -m "fix: normalize PWA identity and remove markdown fence"
+          git push
