@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v167-global-payment-queue';
+const CACHE_NAME = 'recibocondo-v168-last-payment-order';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
