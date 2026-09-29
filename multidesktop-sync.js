@@ -148,6 +148,19 @@
     state.desktopSyncNow = async function(){
       this.syncState='syncing'; this.syncError='';
       try{
+        let restoreReview=null;
+        try{ restoreReview=JSON.parse(localStorage.getItem(RC_RESTORE_REVIEW_KEY)||'null'); }catch(_){}
+        if(restoreReview){
+          const c=restoreReview.counts||{};
+          const ok=window.confirm(
+            'PROTEÇÃO DE SEGURANÇA\n\nUma restauração foi feita recentemente ('+
+            (restoreReview.at?new Date(restoreReview.at).toLocaleString('pt-BR'):'horário não informado')+
+            ').\n\nBase restaurada: '+(c.services||0)+' serviços • '+(c.payments||0)+' pagamentos • '+(c.receipts||0)+' recibos.'+
+            '\n\nSó confirme se você já conferiu que esta é a base correta.\n\nOK = liberar esta sincronização com o Firebase.\nCancelar = não enviar nada para a nuvem.'
+          );
+          if(!ok){ this.syncState='ready'; return; }
+          localStorage.removeItem(RC_RESTORE_REVIEW_KEY);
+        }
         if(!window.rcFirebaseSync?.configured) throw new Error('Projeto Firebase do ReciboCondo ainda não vinculado.');
         if(!window.rcFirebaseSync.uid&&!this.firebaseUid) throw new Error('Entre com sua conta Google antes de sincronizar.');
 
@@ -182,6 +195,105 @@
         this.syncState='error'; this.syncError=e?.message||String(e); this.toast(this.syncError,'warning');
       }finally{ this.after(); }
     };
+
+    // V169 — proteção contra restauração acidental de base antiga.
+    // Antes de substituir os dados, cria uma cópia de emergência da base atual
+    // e exige confirmação extra quando o backup possui menos registros críticos.
+    const RC_RESTORE_REVIEW_KEY='rc_restore_pending_review_v1';
+    const RC_RESTORE_EMERGENCY_KEY='rc_restore_emergency_snapshot_v1';
+    const baseRestore=state.restore;
+    if(typeof baseRestore==='function'){
+      state.restore=async function(ev){
+        const file=ev?.target?.files?.[0];
+        if(!file) return baseRestore.apply(this,arguments);
+        try{
+          const incoming=JSON.parse(await file.text());
+          const current={
+            providers:(this.providers||[]).length,
+            services:(this.services||[]).length,
+            payments:(this.payments||[]).length,
+            receipts:(this.receipts||[]).length,
+            recurrences:(this.recurrences||[]).length
+          };
+          const next={
+            providers:Array.isArray(incoming?.providers)?incoming.providers.length:0,
+            services:Array.isArray(incoming?.services)?incoming.services.length:0,
+            payments:Array.isArray(incoming?.payments)?incoming.payments.length:0,
+            receipts:Array.isArray(incoming?.receipts)?incoming.receipts.length:0,
+            recurrences:Array.isArray(incoming?.recurrences)?incoming.recurrences.length:0
+          };
+          const decreases=[];
+          if(next.receipts<current.receipts) decreases.push('recibos: '+current.receipts+' → '+next.receipts);
+          if(next.services<current.services) decreases.push('serviços: '+current.services+' → '+next.services);
+          if(next.payments<current.payments) decreases.push('pagamentos: '+current.payments+' → '+next.payments);
+
+          if(decreases.length){
+            const exported=incoming?.exportedAt ? '\nData do backup: '+new Date(incoming.exportedAt).toLocaleString('pt-BR') : '';
+            const ok=window.confirm(
+              'ATENÇÃO: este backup é menor que a base atual.\n\n'+
+              decreases.join('\n')+exported+
+              '\n\nContinuar substituirá a base atual. Antes disso, o ReciboCondo criará uma cópia de emergência.\n\nDeseja continuar?'
+            );
+            if(!ok){ if(ev?.target) ev.target.value=''; return; }
+          }
+
+          const emergency={
+            app:'ReciboCondo',
+            backupFormat:4,
+            safetySnapshot:true,
+            settings:this.settings||{},
+            providers:this.providers||[],
+            services:this.services||[],
+            receipts:this.receipts||[],
+            recurrences:this.recurrences||[],
+            payments:this.payments||[],
+            logs:this.logs||[],
+            receiptSeq:Number(this.receiptSeqValue||0),
+            exportedAt:new Date().toISOString(),
+            backupStats:{
+              providers:current.providers,
+              services:current.services,
+              receipts:current.receipts,
+              recurrences:current.recurrences,
+              payments:current.payments,
+              records:current.providers+current.services+current.receipts+current.recurrences+current.payments
+            }
+          };
+          try{
+            localStorage.setItem(RC_RESTORE_EMERGENCY_KEY,JSON.stringify(emergency));
+            localStorage.setItem(RC_RESTORE_EMERGENCY_KEY+'_at',emergency.exportedAt);
+          }catch(e){
+            console.warn('[ReciboCondo] Snapshot de emergência não coube no localStorage.',e);
+          }
+          try{
+            const stamp=emergency.exportedAt.replace(/[:.]/g,'-');
+            this.download('backup-recibocondo-EMERGENCIA-antes-restore-'+stamp+'.json',JSON.stringify(emergency,null,2),'application/json');
+          }catch(e){
+            console.warn('[ReciboCondo] Não foi possível baixar automaticamente o snapshot de emergência.',e);
+          }
+
+          await baseRestore.call(this,ev);
+
+          const after={
+            services:(this.services||[]).length,
+            payments:(this.payments||[]).length,
+            receipts:(this.receipts||[]).length
+          };
+          if(after.services===next.services && after.payments===next.payments && after.receipts===next.receipts){
+            localStorage.setItem(RC_RESTORE_REVIEW_KEY,JSON.stringify({
+              at:new Date().toISOString(),
+              sourceFile:file.name||'backup JSON',
+              counts:next
+            }));
+            this.toast('Backup restaurado. Sincronização com a nuvem ficará protegida até você confirmar a conferência da base.','warning');
+          }
+        }catch(e){
+          console.error('[ReciboCondo] Proteção de restauração:',e);
+          this.toast('Não foi possível validar o backup antes da restauração: '+(e?.message||e),'error');
+          if(ev?.target) ev.target.value='';
+        }
+      };
+    }
 
     const baseInit=state.init;
     state.init=async function(){
