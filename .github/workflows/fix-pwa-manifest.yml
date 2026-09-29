@@ -1,4 +1,4 @@
-name: Inspect ReciboCondo PWA manifest
+name: Inspect ReciboCondo current brand icon
 
 on:
   push:
@@ -13,19 +13,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect manifest placement
+      - name: Find header brand icon
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           s=Path("index.html").read_text(encoding="utf-8")
-          head_open=s.lower().find("<head")
-          head_close=s.lower().find("</head>")
-          matches=[m.start() for m in re.finditer(r'rel\s*=\s*["\']manifest["\']',s,re.I)]
-          print("HEAD_OPEN",head_open)
-          print("HEAD_CLOSE",head_close)
-          print("MANIFEST_MATCHES",matches[:20])
-          for pos in matches[:5]:
-              print("CONTEXT",repr(s[max(0,pos-250):pos+350]))
-          print("IN_REAL_HEAD", [p for p in matches if head_open <= p <= head_close])
+          terms=["ReciboCondo","building-2","building","landmark"]
+          for term in terms:
+              print("\nTERM",term)
+              start=0
+              shown=0
+              while shown<8:
+                  i=s.find(term,start)
+                  if i<0: break
+                  print("POS",i,repr(s[max(0,i-350):i+500]))
+                  start=i+len(term)
+                  shown+=1
           PY
