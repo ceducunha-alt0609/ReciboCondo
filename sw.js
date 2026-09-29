@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v169-pwa-restore-safety';
+const CACHE_NAME = 'recibocondo-v170-pwa-icon-refresh';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
