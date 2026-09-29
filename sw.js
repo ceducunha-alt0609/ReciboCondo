@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v168-last-payment-order';
+const CACHE_NAME = 'recibocondo-v169-pwa-restore-safety';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
@@ -20,6 +20,12 @@ async function injectSyncPatch(response) {
   if (!type.includes('text/html')) return response;
   const text = await response.text();
   let injected = text;
+  if (!/<link[^>]+rel=["']manifest["']/i.test(injected)) {
+    injected = injected.replace(
+      '</head>',
+      '<link rel="manifest" href="./manifest.json">\n<meta name="theme-color" content="#0F2A3A">\n</head>'
+    );
+  }
   if (!injected.includes('multidesktop-sync.js')) {
     injected = injected.replace('</body>', '<script src="./multidesktop-sync.js"></script>\n</body>');
   }
