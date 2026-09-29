@@ -66,3 +66,5 @@ assert s.lstrip().lower().startswith("<!doctype html>")
 assert '/ReciboCondo/manifest.json?v=173' in s
 assert 'recibocondo-pwa-192-v172.png?v=173' in s
 print("PWA identity normalized.")
+
+# trigger normalization
