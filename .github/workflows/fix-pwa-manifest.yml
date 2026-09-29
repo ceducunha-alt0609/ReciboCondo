@@ -1,4 +1,4 @@
-name: Fix ReciboCondo PWA manifest
+name: Inspect ReciboCondo PWA manifest
 
 on:
   push:
@@ -6,35 +6,26 @@ on:
       - '.github/workflows/fix-pwa-manifest.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Insert manifest link in index.html
+      - name: Inspect manifest placement
         run: |
           python - <<'PY'
           from pathlib import Path
-          p = Path("index.html")
-          s = p.read_text(encoding="utf-8")
-          if 'rel="manifest"' not in s and "rel='manifest'" not in s:
-              marker = "</head>"
-              if marker not in s:
-                  raise SystemExit("No </head> found")
-              injection = '  <link rel="manifest" href="./manifest.json">\n  <meta name="theme-color" content="#0F2A3A">\n'
-              s = s.replace(marker, injection + marker, 1)
-              p.write_text(s, encoding="utf-8")
+          import re
+          s=Path("index.html").read_text(encoding="utf-8")
+          head_open=s.lower().find("<head")
+          head_close=s.lower().find("</head>")
+          matches=[m.start() for m in re.finditer(r'rel\s*=\s*["\']manifest["\']',s,re.I)]
+          print("HEAD_OPEN",head_open)
+          print("HEAD_CLOSE",head_close)
+          print("MANIFEST_MATCHES",matches[:20])
+          for pos in matches[:5]:
+              print("CONTEXT",repr(s[max(0,pos-250):pos+350]))
+          print("IN_REAL_HEAD", [p for p in matches if head_open <= p <= head_close])
           PY
-      - name: Commit patch
-        run: |
-          if git diff --quiet -- index.html; then
-            echo "Manifest link already present."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git commit -m "fix: add PWA manifest link to index"
-          git push
