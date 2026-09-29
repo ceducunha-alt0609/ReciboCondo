@@ -22,6 +22,19 @@
     const state = originalApp.apply(this, arguments);
     window.__rcAppState = state;
 
+    // V168 — "Último registro" deve refletir a ordem em que o pagamento foi lançado,
+    // não a data histórica informada para o pagamento.
+    Object.defineProperty(state,'lastPaymentEvent',{
+      configurable:true,
+      enumerable:true,
+      get(){
+        return [...(this.payments||[])].sort((a,b)=>
+          String(b.createdAt||'').localeCompare(String(a.createdAt||'')) ||
+          Number(b.id||0)-Number(a.id||0)
+        )[0]||null;
+      }
+    });
+
     // V167 — a fila operacional deve mostrar TODO lançamento em aberto,
     // independentemente do mês usado pelos indicadores da Central de Pagamentos.
     Object.defineProperty(state,'paymentQueueRows',{
