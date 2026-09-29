@@ -1,4 +1,4 @@
-name: Build ReciboCondo PNG PWA icons
+name: Inspect ReciboCondo PWA head
 
 on:
   push:
@@ -6,95 +6,23 @@ on:
       - '.github/workflows/fix-pwa-manifest.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build-icons:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Pillow
-        run: python -m pip install pillow
-      - name: Generate PNG icons and update manifest
+      - name: Inspect head and registration
         run: |
           python - <<'PY'
-          from PIL import Image, ImageDraw
           from pathlib import Path
-          import json, re
-
-          out = Path("assets/icons")
-          out.mkdir(parents=True, exist_ok=True)
-
-          def make_icon(size, path, maskable=False):
-              bg = (238,247,241,255)
-              green = (5,150,105,255)
-              im = Image.new("RGBA",(size,size),bg)
-              d = ImageDraw.Draw(im)
-
-              # proportions based on the app's current Lucide building-2 identity
-              pad = int(size*0.15 if not maskable else size*0.19)
-              sw = max(4, int(size*0.055))
-              left = int(size*0.30)
-              right = int(size*0.70)
-              top = int(size*0.17)
-              bottom = int(size*0.82)
-
-              # main building
-              d.rounded_rectangle([left,top,right,bottom], radius=max(6,int(size*.03)),
-                                  outline=green, width=sw)
-
-              # side wings
-              d.line([(left,int(size*.47)),(int(size*.16),int(size*.47)),(int(size*.16),bottom)],
-                     fill=green,width=sw,joint="curve")
-              d.line([(right,int(size*.37)),(int(size*.84),int(size*.37)),(int(size*.84),bottom)],
-                     fill=green,width=sw,joint="curve")
-
-              # floors
-              for y in [0.30,0.43,0.56,0.69]:
-                  yy=int(size*y)
-                  d.line([(int(size*.43),yy),(int(size*.57),yy)],fill=green,width=sw)
-
-              # ground
-              d.line([(pad,bottom),(size-pad,bottom)],fill=green,width=sw)
-
-              im.save(path,"PNG")
-
-          make_icon(192,out/"recibocondo-pwa-192-v172.png",False)
-          make_icon(512,out/"recibocondo-pwa-512-v172.png",False)
-          make_icon(192,out/"recibocondo-maskable-192-v172.png",True)
-          make_icon(512,out/"recibocondo-maskable-512-v172.png",True)
-
-          p=Path("manifest.json")
-          data=json.loads(p.read_text(encoding="utf-8"))
-          data["icons"]=[
-            {"src":"assets/icons/recibocondo-pwa-192-v172.png","sizes":"192x192","type":"image/png","purpose":"any"},
-            {"src":"assets/icons/recibocondo-pwa-512-v172.png","sizes":"512x512","type":"image/png","purpose":"any"},
-            {"src":"assets/icons/recibocondo-maskable-192-v172.png","sizes":"192x192","type":"image/png","purpose":"maskable"},
-            {"src":"assets/icons/recibocondo-maskable-512-v172.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
-          ]
-          p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
-
-          sw=Path("sw.js")
-          s=sw.read_text(encoding="utf-8")
-          s=re.sub(r"const CACHE_NAME = 'recibocondo-[^']+';","const CACHE_NAME = 'recibocondo-v172-png-pwa-icons';",s,1)
-          for icon in [
-            "./assets/icons/recibocondo-pwa-192-v172.png",
-            "./assets/icons/recibocondo-pwa-512-v172.png",
-            "./assets/icons/recibocondo-maskable-192-v172.png",
-            "./assets/icons/recibocondo-maskable-512-v172.png"
-          ]:
-              if icon not in s:
-                  s=s.replace("  './multidesktop-sync.js'","  '"+icon+"',\n  './multidesktop-sync.js'")
-          sw.write_text(s,encoding="utf-8")
+          import re
+          s=Path("index.html").read_text(encoding="utf-8")
+          head=s[s.lower().find("<head"):s.lower().find("</head>")+7]
+          for pat in ["Content-Security-Policy","manifest.json","serviceWorker.register","navigator.serviceWorker","theme-color"]:
+              print("\nPATTERN",pat)
+              for m in re.finditer(re.escape(pat),s,re.I):
+                  print("POS",m.start(),repr(s[max(0,m.start()-300):m.start()+500]))
+          print("\nHEAD_FIRST_2500\n",head[:2500])
           PY
-      - name: Commit PNG PWA icons
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add manifest.json sw.js assets/icons/recibocondo-*-v172.png
-          if git diff --cached --quiet; then
-            echo "Nothing to commit."
-            exit 0
-          fi
-          git commit -m "fix: use PNG icons for Edge PWA installation"
-          git push
