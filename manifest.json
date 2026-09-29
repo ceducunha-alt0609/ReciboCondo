@@ -17,15 +17,27 @@
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "assets/icons/recibocondo-current.svg?v=171",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "assets/icons/recibocondo-pwa-192-v172.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icons/recibocondo-current-maskable.svg?v=171",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "assets/icons/recibocondo-pwa-512-v172.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/recibocondo-maskable-192-v172.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/icons/recibocondo-maskable-512-v172.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]
