@@ -3,7 +3,7 @@
   "name": "ReciboCondo – Controle de Recibos Condominiais",
   "short_name": "ReciboCondo",
   "description": "Controle e emissão de recibos de prestadores e serviços de condomínio.",
-  "start_url": "/ReciboCondo/index.html",
+  "start_url": "/ReciboCondo/",
   "scope": "/ReciboCondo/",
   "display": "standalone",
   "orientation": "portrait",
@@ -17,25 +17,25 @@
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "assets/icons/recibocondo-pwa-192-v172.png",
+      "src": "/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png?v=173",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icons/recibocondo-pwa-512-v172.png",
+      "src": "/ReciboCondo/assets/icons/recibocondo-pwa-512-v172.png?v=173",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icons/recibocondo-maskable-192-v172.png",
+      "src": "/ReciboCondo/assets/icons/recibocondo-maskable-192-v172.png?v=173",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "assets/icons/recibocondo-maskable-512-v172.png",
+      "src": "/ReciboCondo/assets/icons/recibocondo-maskable-512-v172.png?v=173",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
