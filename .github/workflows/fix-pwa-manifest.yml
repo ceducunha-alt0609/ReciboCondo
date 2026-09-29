@@ -1,4 +1,4 @@
-name: Inspect ReciboCondo PWA head
+name: Inspect published ReciboCondo PWA files
 
 on:
   push:
@@ -13,16 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect head and registration
+      - name: Inspect published PWA resources
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          s=Path("index.html").read_text(encoding="utf-8")
-          head=s[s.lower().find("<head"):s.lower().find("</head>")+7]
-          for pat in ["Content-Security-Policy","manifest.json","serviceWorker.register","navigator.serviceWorker","theme-color"]:
-              print("\nPATTERN",pat)
-              for m in re.finditer(re.escape(pat),s,re.I):
-                  print("POS",m.start(),repr(s[max(0,m.start()-300):m.start()+500]))
-          print("\nHEAD_FIRST_2500\n",head[:2500])
-          PY
+          set -x
+          curl -sS -D - -o /tmp/manifest https://ceducunha-alt0609.github.io/ReciboCondo/manifest.json | sed -n '1,30p'
+          echo "----- MANIFEST BODY -----"
+          cat /tmp/manifest
+          echo "----- ICON 192 HEADERS -----"
+          curl -sS -I https://ceducunha-alt0609.github.io/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png
+          echo "----- ICON 512 HEADERS -----"
+          curl -sS -I https://ceducunha-alt0609.github.io/ReciboCondo/assets/icons/recibocondo-pwa-512-v172.png
+          echo "----- INDEX FIRST 120 BYTES -----"
+          curl -sS https://ceducunha-alt0609.github.io/ReciboCondo/ | head -c 120 | xxd
