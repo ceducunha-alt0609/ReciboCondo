@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v175-desktop-session-refresh';
+const CACHE_NAME = 'recibocondo-v176-pwa-install-refresh';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
@@ -7,34 +7,64 @@ const APP_SHELL = [
   './manifest.json',
   './favicon.ico',
   './apple-touch-icon.png',
-  './assets/icons/icon-192.png',
-  './assets/icons/icon-512.png',
-  './assets/icons/icon-maskable-192.png',
-  './assets/icons/icon-maskable-512.png',
-  './assets/icons/recibocondo-current.svg',
-  './assets/icons/recibocondo-current-maskable.svg',
   './assets/icons/recibocondo-pwa-192-v172.png',
   './assets/icons/recibocondo-pwa-512-v172.png',
   './assets/icons/recibocondo-maskable-192-v172.png',
   './assets/icons/recibocondo-maskable-512-v172.png',
-  './multidesktop-sync.js'
+  './multidesktop-sync.js',
+  './pwa-install.js'
 ];
 
 async function injectSyncPatch(response) {
   if (!response || !response.ok) return response;
   const type = response.headers.get('content-type') || '';
   if (!type.includes('text/html')) return response;
+
   const text = await response.text();
   let injected = text;
+
   if (!/<link[^>]+rel=["']manifest["']/i.test(injected)) {
     injected = injected.replace(
       '</head>',
-      '<link rel="manifest" href="./manifest.json">\n<meta name="theme-color" content="#0F2A3A">\n</head>'
+      '<link rel="manifest" href="./manifest.json">\n</head>'
     );
   }
-  if (!injected.includes('multidesktop-sync.js')) {
-    injected = injected.replace('</body>', '<script src="./multidesktop-sync.js"></script>\n</body>');
+
+  if (!/<meta[^>]+name=["']theme-color["']/i.test(injected)) {
+    injected = injected.replace(
+      '</head>',
+      '<meta name="theme-color" content="#0F2A3A">\n</head>'
+    );
   }
+
+  if (!/<link[^>]+rel=["']apple-touch-icon["']/i.test(injected)) {
+    injected = injected.replace(
+      '</head>',
+      '<link rel="apple-touch-icon" href="./apple-touch-icon.png">\n</head>'
+    );
+  }
+
+  if (!/<meta[^>]+name=["']apple-mobile-web-app-capable["']/i.test(injected)) {
+    injected = injected.replace(
+      '</head>',
+      '<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n</head>'
+    );
+  }
+
+  if (!injected.includes('multidesktop-sync.js')) {
+    injected = injected.replace(
+      '</body>',
+      '<script src="./multidesktop-sync.js"></script>\n</body>'
+    );
+  }
+
+  if (!injected.includes('pwa-install.js')) {
+    injected = injected.replace(
+      '</body>',
+      '<script src="./pwa-install.js"></script>\n</body>'
+    );
+  }
+
   if (!injected.includes('rc-splash-native-v165')) {
     const splashCss = '<style id="rc-splash-native-v165">' +
       '#rcDynamicSplash .rc-card{width:min(84vw,390px)!important;padding:18px!important;transform:none!important;margin:auto!important;text-align:center!important}' +
@@ -48,9 +78,14 @@ async function injectSyncPatch(response) {
       '</style>';
     injected = injected.replace('</head>', splashCss + '\n</head>');
   }
+
   const headers = new Headers(response.headers);
   headers.delete('content-length');
-  return new Response(injected, { status: response.status, statusText: response.statusText, headers });
+  return new Response(injected, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 }
 
 self.addEventListener('install', event => {
