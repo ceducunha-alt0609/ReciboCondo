@@ -17,25 +17,25 @@
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png?v=173",
+      "src": "/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png?v=176",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/ReciboCondo/assets/icons/recibocondo-pwa-512-v172.png?v=173",
+      "src": "/ReciboCondo/assets/icons/recibocondo-pwa-512-v172.png?v=176",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/ReciboCondo/assets/icons/recibocondo-maskable-192-v172.png?v=173",
+      "src": "/ReciboCondo/assets/icons/recibocondo-maskable-192-v172.png?v=176",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/ReciboCondo/assets/icons/recibocondo-maskable-512-v172.png?v=173",
+      "src": "/ReciboCondo/assets/icons/recibocondo-maskable-512-v172.png?v=176",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
