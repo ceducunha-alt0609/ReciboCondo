@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v173-normalized-pwa-identity';
+const CACHE_NAME = 'recibocondo-v174-persistent-session';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
