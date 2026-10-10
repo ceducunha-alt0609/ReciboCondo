@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v176-pwa-install-refresh';
+const CACHE_NAME = 'recibocondo-v177-current-pwa-icons';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
@@ -7,10 +7,10 @@ const APP_SHELL = [
   './manifest.json',
   './favicon.ico',
   './apple-touch-icon.png',
-  './assets/icons/recibocondo-pwa-192-v172.png',
-  './assets/icons/recibocondo-pwa-512-v172.png',
-  './assets/icons/recibocondo-maskable-192-v172.png',
-  './assets/icons/recibocondo-maskable-512-v172.png',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png',
+  './assets/icons/icon-maskable-192.png',
+  './assets/icons/icon-maskable-512.png',
   './multidesktop-sync.js',
   './pwa-install.js'
 ];
