@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'recibocondo-';
-const CACHE_NAME = 'recibocondo-v174-persistent-session';
+const CACHE_NAME = 'recibocondo-v175-desktop-session-refresh';
 const APP_SCOPE = '/ReciboCondo/';
 const APP_SHELL = [
   './',
