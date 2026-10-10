@@ -9,33 +9,29 @@
   "orientation": "portrait",
   "background_color": "#0F2A3A",
   "theme_color": "#0F2A3A",
-  "categories": [
-    "finance",
-    "productivity",
-    "business"
-  ],
+  "categories": ["finance", "productivity", "business"],
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "/ReciboCondo/assets/icons/recibocondo-pwa-192-v172.png?v=176",
+      "src": "/ReciboCondo/assets/icons/icon-192.png?v=177",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/ReciboCondo/assets/icons/recibocondo-pwa-512-v172.png?v=176",
+      "src": "/ReciboCondo/assets/icons/icon-512.png?v=177",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/ReciboCondo/assets/icons/recibocondo-maskable-192-v172.png?v=176",
+      "src": "/ReciboCondo/assets/icons/icon-maskable-192.png?v=177",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/ReciboCondo/assets/icons/recibocondo-maskable-512-v172.png?v=176",
+      "src": "/ReciboCondo/assets/icons/icon-maskable-512.png?v=177",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
