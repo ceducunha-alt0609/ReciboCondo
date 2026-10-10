@@ -1,4 +1,4 @@
-/* ReciboCondo V174 - sync seguro + topbar + sessão persistente no dispositivo
+/* ReciboCondo V175 - sync seguro + topbar + sessão persistente no dispositivo
    Carregado pelo Service Worker para evitar substituir o index.html monolítico. */
 (function(){
   if (window.__rcMultiDesktopSyncV160) return;
@@ -47,7 +47,8 @@
       }
     });
 
-    // V174 — mantém a sessão neste dispositivo, inclusive após fechar a janela/PWA.
+    // V175 — mantém a sessão neste dispositivo, inclusive após fechar a janela/PWA
+    // e reaplica a sessão depois do init(), que no desktop pode sobrescrever auth/view.
     // Guarda apenas estado de login e perfil; a senha não é armazenada.
     const RC_SESSION_KEY='rc_runtime_session_v1';
     const RC_VIEW_KEY='rc_runtime_view_v1';
@@ -84,6 +85,12 @@
     if(typeof baseDoLogin==='function'){
       state.doLogin=function(){
         const result=baseDoLogin.apply(this,arguments);
+        if(result && typeof result.then==='function'){
+          return result.then(value=>{
+            if(this.auth?.logged) saveRuntimeSession();
+            return value;
+          });
+        }
         if(this.auth?.logged) saveRuntimeSession();
         return result;
       };
@@ -304,6 +311,12 @@
         if(this.firebaseUid) await this.desktopBootstrapFromCloud();
       });
       await baseInit.call(this);
+
+      // V175 — o init original pode reconstruir auth/view no desktop.
+      // Reaplica a sessão persistente depois dele e força o estado visual correto.
+      readRuntimeSession();
+      if(this.auth?.logged && typeof this.after==='function') this.after();
+
       if(this.appPlatform==='Desktop'&&this.firebaseUid) await this.desktopBootstrapFromCloud();
     };
 
