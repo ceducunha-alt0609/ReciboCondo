@@ -1,4 +1,4 @@
-/* ReciboCondo V163 - sync seguro + topbar + sessão preservada no refresh
+/* ReciboCondo V174 - sync seguro + topbar + sessão persistente no dispositivo
    Carregado pelo Service Worker para evitar substituir o index.html monolítico. */
 (function(){
   if (window.__rcMultiDesktopSyncV160) return;
@@ -47,18 +47,18 @@
       }
     });
 
-    // V163 — preserva sessão e tela durante recargas/atualizações da mesma janela.
-    // sessionStorage mantém o comportamento seguro: fechar a janela/PWA encerra a sessão.
+    // V174 — mantém a sessão neste dispositivo, inclusive após fechar a janela/PWA.
+    // Guarda apenas estado de login e perfil; a senha não é armazenada.
     const RC_SESSION_KEY='rc_runtime_session_v1';
     const RC_VIEW_KEY='rc_runtime_view_v1';
     const validViews=new Set(['dashboard','prestadores','servicos','pagamentos','recibos','relatorios','busca','config']);
     const readRuntimeSession=()=>{
       try{
-        const raw=sessionStorage.getItem(RC_SESSION_KEY);
+        const raw=localStorage.getItem(RC_SESSION_KEY);
         const saved=raw?JSON.parse(raw):null;
         if(saved && saved.logged===true && (saved.role==='admin'||saved.role==='viewer')){
           state.auth={logged:true,role:saved.role};
-          const v=sessionStorage.getItem(RC_VIEW_KEY);
+          const v=localStorage.getItem(RC_VIEW_KEY);
           if(validViews.has(v)) state.view=v;
         }
       }catch(_){}
@@ -66,15 +66,15 @@
     const saveRuntimeSession=()=>{
       try{
         if(state.auth?.logged){
-          sessionStorage.setItem(RC_SESSION_KEY,JSON.stringify({logged:true,role:state.auth.role||'viewer'}));
-          if(validViews.has(state.view)) sessionStorage.setItem(RC_VIEW_KEY,state.view);
+          localStorage.setItem(RC_SESSION_KEY,JSON.stringify({logged:true,role:state.auth.role||'viewer'}));
+          if(validViews.has(state.view)) localStorage.setItem(RC_VIEW_KEY,state.view);
         }
       }catch(_){}
     };
     const clearRuntimeSession=()=>{
       try{
-        sessionStorage.removeItem(RC_SESSION_KEY);
-        sessionStorage.removeItem(RC_VIEW_KEY);
+        localStorage.removeItem(RC_SESSION_KEY);
+        localStorage.removeItem(RC_VIEW_KEY);
       }catch(_){}
     };
 
